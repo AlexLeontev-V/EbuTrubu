@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Управление чатом</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin-top: 50px;
+            background-color: #f0f8ff;
+        }
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+            border: none;
+            border-radius: 5px;
+            background: linear-gradient(to right, #4facfe, #00f2fe);
+            color: white;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        }
+        button:active {
+            transform: translateY(0);
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        input[type="text"], input[type="range"] {
+            padding: 10px;
+            font-size: 16px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        .slider-value {
+            font-size: 16px;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Управление чатом</h1>
+    <form method="post">
+        {% if not is_speaking %}
+            <input type="text" name="video_id" placeholder="Введите ID видео" required>
+            <div class="slider-value">Минимальная длина: <span id="slider-value">{{ min_length }}</span></div>
+            <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
+            <button type="submit">Включить</button>
+        {% else %}
+            <button type="submit">Выключить</button>
+        {% endif %}
+    </form>
+</body>
+</html>
