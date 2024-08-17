@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Управление чатом</title>
+    <title>EbuTrubu.com</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -17,7 +17,6 @@
             margin: 5px;
             border: none;
             border-radius: 5px;
-            background: linear-gradient(to right, #4facfe, #00f2fe);
             color: white;
             cursor: pointer;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
@@ -30,6 +29,12 @@
         button:active {
             transform: translateY(0);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+        .green-button {
+            background-color: #4caf50; /* Зеленый */
+        }
+        .red-button {
+            background-color: #f44336; /* Красный */
         }
         input[type="text"], input[type="range"] {
             padding: 10px;
@@ -45,16 +50,22 @@
     </style>
 </head>
 <body>
-    <h1>Управление чатом</h1>
+    <h1>EbuTrubu.com</h1>
     <form method="post">
-        {% if not is_speaking %}
-            <input type="text" name="video_id" placeholder="Введите ID видео" required>
-            <div class="slider-value">Минимальная длина: <span id="slider-value">{{ min_length }}</span></div>
-            <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
-            <button type="submit">Включить</button>
-        {% else %}
-            <button type="submit">Выключить</button>
-        {% endif %}
+        <input type="text" name="video_url" placeholder="Введите ссылку на видео" value="{{ video_url }}" required>
+        <div class="slider-value">Пауза между сообщениями: <span id="slider-value">{{ min_length }}</span></div>
+        <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
+        <div>
+            <label for="voice_index">Выберите голос:</label>
+            <select name="voice_index" id="voice_index">
+                {% for index, voice in voices %}
+                    <option value="{{ index }}" {% if index == selected_voice_index %}selected{% endif %}>{{ voice.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <button type="submit" class="{{ 'green-button' if not is_speaking else 'red-button' }}">
+            {{ 'Включить' if not is_speaking else 'Выключить' }}
+        </button>
     </form>
 </body>
 </html>
