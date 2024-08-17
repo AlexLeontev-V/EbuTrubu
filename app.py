@@ -1,11 +1,12 @@
 import multiprocessing
 import time
 import re
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, session
 import pyttsx3
 import pytchat
 
 app = Flask(__name__)
+app.secret_key = 'your_secret_key'  # Необходимо для использования сессий
 
 # Инициализация движка речи
 engine = pyttsx3.init()
@@ -14,10 +15,7 @@ engine = pyttsx3.init()
 voices = engine.getProperty('voices')
 
 # Переменные для хранения состояния
-chat_process = None
-is_speaking = False
-min_length = 0
-selected_voice_index = 0  # Индекс выбранного голоса
+chat_processes = []
 
 # Функция для озвучивания текста
 def speak(text, voice_index):
@@ -29,6 +27,11 @@ def speak(text, voice_index):
 def clean_comment(comment):
     cleaned_comment = re.sub(r'[^\w\s\u1F600-\u1F64F]', '', comment)
     return cleaned_comment
+
+# Функция для извлечения идентификатора видео из ссылки
+def extract_video_id(url):
+    match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', url)
+    return match.group(1) if match else None
 
 # Функция для обработки чата
 def process_chat(video_id, min_length, voice_index):
@@ -48,38 +51,54 @@ def process_chat(video_id, min_length, voice_index):
 
 # Функция для запуска озвучивания в отдельном процессе
 def start_speaking(video_id, min_length, voice_index):
-    global chat_process, is_speaking
-    if not is_speaking:
-        chat_process = multiprocessing.Process(target=process_chat, args=(video_id, min_length, voice_index))
-        chat_process.start()
-        is_speaking = True
+    process = multiprocessing.Process(target=process_chat, args=(video_id, min_length, voice_index))
+    process.start()
+    chat_processes.append(process)
+    session['is_speaking'] = True  # Обновляем состояние в сессии
 
-# Функция для остановки обработки
-def stop_speaking():
-    global chat_process, is_speaking
-    if chat_process:
-        chat_process.terminate()
-        chat_process = None
-    is_speaking = False
+# Функция для остановки всех процессов
+def stop_all_processes():
+    global chat_processes
+    for process in chat_processes:
+        process.terminate()
+    chat_processes = []
+    session['is_speaking'] = False  # Обновляем состояние в сессии
 
 @app.route('/', methods=['GET', 'POST'])
 def index():
-    global is_speaking, min_length, selected_voice_index
+    # Устанавливаем состояние is_speaking в False, если оно не определено
+    if 'is_speaking' not in session:
+        session['is_speaking'] = False
+
     if request.method == 'POST':
-        if is_speaking:
-            stop_speaking()
+        if session.get('is_speaking', False):
+            stop_all_processes()
         else:
-            video_id = request.form.get('video_id', '')
-            min_length = int(request.form.get('min_length', 0))
-            selected_voice_index = int(request.form.get('voice_index', 0))
+            session['video_url'] = request.form.get('video_url', '')
+            session['min_length'] = int(request.form.get('min_length', 0))
+            session['voice_index'] = int(request.form.get('voice_index', 0))
+            video_id = extract_video_id(session['video_url'])
             if video_id:
-                start_speaking(video_id, min_length, selected_voice_index)
+                start_speaking(video_id, session['min_length'], session['voice_index'])
         return redirect(url_for('index'))
+
+    # Загружаем настройки из сессии, если они существуют
+    min_length = session.get('min_length', 0)
+    selected_voice_index = session.get('voice_index', 0)
+    video_url = session.get('video_url', '')
+    is_speaking = session.get('is_speaking', False)
 
     # Создание списка кортежей (индекс, голос)
     voices_with_index = [(index, voice) for index, voice in enumerate(voices)]
 
-    return render_template('index.html', is_speaking=is_speaking, min_length=min_length, voices=voices_with_index, selected_voice_index=selected_voice_index)
+    return render_template(
+        'index.html',
+        video_url=video_url,
+        min_length=min_length,
+        voices=voices_with_index,
+        selected_voice_index=selected_voice_index,
+        is_speaking=is_speaking
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
