@@ -1,11 +1,12 @@
-import asyncio
+import multiprocessing
+import time
 import re
 import logging
-from quart import Quart, render_template, request, redirect, url_for, session
+from flask import Flask, render_template, request, redirect, url_for, session
 import pyttsx3
 import pytchat
 
-app = Quart(__name__)
+app = Flask(__name__)
 app.secret_key = 'your_secret_key'  # Необходимо для использования сессий
 
 # Настройка базового логирования
@@ -21,11 +22,11 @@ engine = pyttsx3.init()
 # Получение списка доступных голосов
 voices = engine.getProperty('voices')
 
-# Список для хранения задач
-tasks = []
+# Переменные для хранения состояния
+chat_processes = []
 
 # Функция для озвучивания текста
-async def speak(text, voice_index):
+def speak(text, voice_index):
     engine.setProperty('voice', voices[voice_index].id)
     engine.say(text)
     engine.runAndWait()
@@ -41,7 +42,7 @@ def extract_video_id(url):
     return match.group(1) if match else None
 
 # Функция для обработки чата
-async def process_chat(video_id, min_length, voice_index):
+def process_chat(video_id, min_length, voice_index):
     try:
         chat = pytchat.create(video_id=video_id)
         last_author = None
@@ -52,39 +53,36 @@ async def process_chat(video_id, min_length, voice_index):
                 if len(message) >= min_length:
                     author = c.author.name
                     logging.info('Получено сообщение от %s: %s', author, message)
-                    action = "спрашивает" if "?" in message else "говорит"
                     if author != last_author:
-                        await speak(f"{author} {action}", voice_index)
-                        await asyncio.sleep(0.5)
-                    await speak(message, voice_index)
-                    await asyncio.sleep(2)
+                        speak(f"{author} говорит", voice_index)
+                        time.sleep(0.5)
+                    speak(message, voice_index)
+                    time.sleep(2)
                     last_author = author
                 else:
                     logging.warning('Сообщение слишком короткое: %s', message)
     except Exception as e:
         logging.error('Ошибка при обработке чата: %s', str(e))
 
-# Функция для запуска озвучивания
-async def start_speaking(video_id, min_length, voice_index):
-    task = asyncio.create_task(process_chat(video_id, min_length, voice_index))
-    tasks.append(task)
+# Функция для запуска озвучивания в отдельном процессе
+def start_speaking(video_id, min_length, voice_index):
+    process = multiprocessing.Process(target=process_chat, args=(video_id, min_length, voice_index))
+    process.start()
+    chat_processes.append(process)
     session['is_speaking'] = True
     logging.info('Запустили озвучивание для видео ID: %s', video_id)
 
 # Функция для остановки всех процессов
-async def stop_all_processes():
-    for task in tasks:
-        task.cancel()  # Отменяем задачу
-        try:
-            await task  # Ждем завершения задачи
-        except asyncio.CancelledError:
-            logging.info('Задача была отменена.')
-    tasks.clear()
+def stop_all_processes():
+    global chat_processes
+    for process in chat_processes:
+        process.terminate()
+    chat_processes = []
     session['is_speaking'] = False
     logging.info('Остановили все процессы озвучивания.')
 
 @app.route('/', methods=['GET', 'POST'])
-async def index():
+def index():
     logging.info('Пользователь зашел на сайт.')
 
     if 'is_speaking' not in session:
@@ -92,18 +90,17 @@ async def index():
 
     if request.method == 'POST':
         if session.get('is_speaking', False):
-            await stop_all_processes()
+            stop_all_processes()
             logging.info('Пользователь нажал кнопку: Выключить.')
         else:
-            form = await request.form
-            video_url = form.get('video_url', '')
+            video_url = request.form.get('video_url', '')
             logging.info('Пользователь ввел URL видео: %s', video_url)
             session['video_url'] = video_url
-            session['min_length'] = int(form.get('min_length', 0))
-            session['voice_index'] = int(form.get('voice_index', 0))
+            session['min_length'] = int(request.form.get('min_length', 0))
+            session['voice_index'] = int(request.form.get('voice_index', 0))
             video_id = extract_video_id(session['video_url'])
             if video_id:
-                await start_speaking(video_id, session['min_length'], session['voice_index'])
+                start_speaking(video_id, session['min_length'], session['voice_index'])
             else:
                 logging.warning('Не удалось извлечь идентификатор видео из URL: %s', video_url)
         return redirect(url_for('index'))
@@ -115,7 +112,7 @@ async def index():
 
     voices_with_index = [(index, voice) for index, voice in enumerate(voices)]
 
-    return await render_template(
+    return render_template(
         'index.html',
         video_url=video_url,
         min_length=min_length,
