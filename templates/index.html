@@ -55,14 +55,6 @@
         <input type="text" name="video_url" placeholder="Введите ссылку на видео" value="{{ video_url }}" required>
         <div class="slider-value">Пауза между сообщениями: <span id="slider-value">{{ min_length }}</span></div>
         <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
-        <div>
-            <label for="voice_index">Выберите голос:</label>
-            <select name="voice_index" id="voice_index">
-                {% for index, voice in voices %}
-                    <option value="{{ index }}" {% if index == selected_voice_index %}selected{% endif %}>{{ voice.name }}</option>
-                {% endfor %}
-            </select>
-        </div>
         <button type="submit" class="{{ 'green-button' if not is_speaking else 'red-button' }}">
             {{ 'Включить' if not is_speaking else 'Выключить' }}
         </button>
