@@ -59,5 +59,16 @@
             {{ 'Включить' if not is_speaking else 'Выключить' }}
         </button>
     </form>
+
+    <!-- Добавляем WebSocket и воспроизведение аудио -->
+    <script>
+        const socket = new WebSocket('ws://your_domain_or_IP/ws');
+
+        socket.onmessage = function(event) {
+            const filename = event.data;
+            const audio = new Audio('/audio/' + filename);
+            audio.play();
+        };
+    </script>
 </body>
 </html>
