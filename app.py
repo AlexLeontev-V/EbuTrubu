@@ -4,6 +4,7 @@ import logging
 from quart import Quart, render_template, request, redirect, url_for, session
 import pyttsx3
 import pytchat
+import asyncio
 
 # Глобальная функция для очистки комментариев от специальных символов
 def clean_comment(comment):
@@ -11,7 +12,7 @@ def clean_comment(comment):
     return cleaned_comment
 
 # Функция для озвучивания текста
-def speak(text):
+async def speak(text):
     logging.info(f"Воспроизведение текста: {text}")
     engine = pyttsx3.init()
     voices = engine.getProperty('voices')
@@ -21,7 +22,7 @@ def speak(text):
     engine.runAndWait()
 
 # Функция обработки чата и воспроизведения сообщений
-def process_chat(video_id, min_length):
+async def process_chat(video_id, min_length):
     try:
         logging.info('Попытка создать чат для видео ID: %s', video_id)
         chat = pytchat.create(video_id=video_id)
@@ -31,12 +32,12 @@ def process_chat(video_id, min_length):
             logging.error('Не удалось подключиться к чату. Проверьте правильность video_id.')
             return
 
-        while chat.is_alive():
+        while chat.is_alive() and session.get('is_speaking', False):
             try:
                 items = chat.get().sync_items()
                 if not items:
                     logging.info('Сообщения пока не поступили. Ожидание...')
-                    time.sleep(2)  # Задержка перед следующим запросом
+                    await asyncio.sleep(2)  # Задержка перед следующим запросом
                     continue
 
                 for c in items:
@@ -45,13 +46,13 @@ def process_chat(video_id, min_length):
 
                     if len(message) >= min_length:
                         full_message = f"{c.author.name} говорит {message}"
-                        speak(full_message)
-                        time.sleep(2)  # Добавляем небольшую задержку перед следующим сообщением
+                        await speak(full_message)
+                        await asyncio.sleep(2)  # Добавляем небольшую задержку перед следующим сообщением
                     else:
                         logging.warning('Сообщение слишком короткое: %s', message)
             except Exception as e:
                 logging.error(f'Ошибка при обработке сообщений: {str(e)}. Повторная попытка через 5 секунд.')
-                time.sleep(5)
+                await asyncio.sleep(5)
     except Exception as e:
         logging.error(f'Ошибка при подключении к чату: {str(e)}')
 
@@ -66,11 +67,6 @@ def create_app():
         handlers=[logging.StreamHandler()]  # Вывод логов в консоль
     )
 
-    # Функция для запуска озвучивания
-    def start_speaking(video_id, min_length):
-        logging.info('Начало озвучивания для видео ID: %s', video_id)
-        process_chat(video_id, min_length)
-
     @app.route('/', methods=['GET', 'POST'])
     async def index():
         logging.info('Пользователь зашел на сайт.')
@@ -84,19 +80,28 @@ def create_app():
             session['min_length'] = min_length
             video_id = extract_video_id(video_url)
             if video_id:
-                start_speaking(video_id, min_length)
+                session['is_speaking'] = not session.get('is_speaking', False)  # Переключаем состояние
+                if session['is_speaking']:
+                    asyncio.create_task(process_chat(video_id, min_length))
             else:
                 logging.warning('Не удалось извлечь идентификатор видео из URL: %s', video_url)
             return redirect(url_for('index'))
 
         min_length = session.get('min_length', 0)
         video_url = session.get('video_url', '')
+        is_speaking = session.get('is_speaking', False)
 
         return await render_template(
             'index.html',
             video_url=video_url,
-            min_length=min_length
+            min_length=min_length,
+            is_speaking=is_speaking
         )
+
+    @app.route('/stop', methods=['POST'])
+    async def stop():
+        session['is_speaking'] = False
+        return redirect(url_for('index'))
 
     return app
 
