@@ -51,13 +51,68 @@
 </head>
 <body>
     <h1>EbuTrubu.com</h1>
-    <form method="post">
+    <form id="controlForm" method="post">
         <input type="text" name="video_url" placeholder="Введите ссылку на видео" value="{{ video_url }}" required>
         <div class="slider-value">Пауза между сообщениями: <span id="slider-value">{{ min_length }}</span></div>
         <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
-        <button type="submit" class="{{ 'green-button' if not is_speaking else 'red-button' }}">
+        <button type="submit" id="toggleButton" class="{{ 'green-button' if not is_speaking else 'red-button' }}">
             {{ 'Включить' if not is_speaking else 'Выключить' }}
         </button>
     </form>
+    <script>
+        let synth = window.speechSynthesis;
+
+        const form = document.getElementById('controlForm');
+        const button = document.getElementById('toggleButton');
+        const ws = new WebSocket(`ws://${window.location.host}/ws`);
+
+        form.onsubmit = async function (event) {
+            event.preventDefault();
+            const formData = new FormData(form);
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+            if (response.ok) {
+                const isSpeaking = button.classList.contains('red-button');
+                button.classList.toggle('green-button');
+                button.classList.toggle('red-button');
+                button.textContent = isSpeaking ? 'Включить' : 'Выключить';
+                if (isSpeaking) {
+                    ws.close();
+                    synth.cancel(); // Прекращаем озвучку сразу
+                } else {
+                    window.location.reload();
+                }
+            }
+        };
+
+        ws.onopen = () => {
+            console.log('WebSocket подключен.');
+        };
+
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+            console.log('Получено сообщение:', data.message);
+            speak(data.message);
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket отключен.');
+        };
+
+        ws.onerror = (error) => {
+            console.error('Ошибка WebSocket:', error);
+        };
+
+        function speak(text) {
+            if ('speechSynthesis' in window) {
+                let utterance = new SpeechSynthesisUtterance(text);
+                synth.speak(utterance);
+            } else {
+                alert('Ваш браузер не поддерживает Web Speech API.');
+            }
+        }
+    </script>
 </body>
 </html>

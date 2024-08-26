@@ -1,28 +1,16 @@
-import time
-import re
 import logging
-from quart import Quart, render_template, request, redirect, url_for, session
-import pyttsx3
+from quart import Quart, render_template, request, redirect, url_for, session, websocket
 import pytchat
 import asyncio
+import re
 
 # Глобальная функция для очистки комментариев от специальных символов
 def clean_comment(comment):
     cleaned_comment = re.sub(r'[^\w\s\u1F600-\u1F64F]', '', comment)
     return cleaned_comment
 
-# Функция для озвучивания текста
-async def speak(text):
-    logging.info(f"Воспроизведение текста: {text}")
-    engine = pyttsx3.init()
-    voices = engine.getProperty('voices')
-    if voices:
-        engine.setProperty('voice', voices[0].id)  # Устанавливаем первый голос как основной
-    engine.say(text)  # Воспроизводим текст
-    engine.runAndWait()
-
-# Функция обработки чата и воспроизведения сообщений
-async def process_chat(video_id, min_length):
+# Функция обработки чата и отправки сообщений на клиент через WebSocket
+async def process_chat(video_id, min_length, ws):
     try:
         logging.info('Попытка создать чат для видео ID: %s', video_id)
         chat = pytchat.create(video_id=video_id)
@@ -32,7 +20,7 @@ async def process_chat(video_id, min_length):
             logging.error('Не удалось подключиться к чату. Проверьте правильность video_id.')
             return
 
-        while chat.is_alive() and session.get('is_speaking', False):
+        while chat.is_alive():
             try:
                 items = chat.get().sync_items()
                 if not items:
@@ -46,7 +34,7 @@ async def process_chat(video_id, min_length):
 
                     if len(message) >= min_length:
                         full_message = f"{c.author.name} говорит {message}"
-                        await speak(full_message)
+                        await ws.send_json({"message": full_message})  # Отправка сообщения через WebSocket
                         await asyncio.sleep(2)  # Добавляем небольшую задержку перед следующим сообщением
                     else:
                         logging.warning('Сообщение слишком короткое: %s', message)
@@ -80,28 +68,28 @@ def create_app():
             session['min_length'] = min_length
             video_id = extract_video_id(video_url)
             if video_id:
-                session['is_speaking'] = not session.get('is_speaking', False)  # Переключаем состояние
-                if session['is_speaking']:
-                    asyncio.create_task(process_chat(video_id, min_length))
+                session['video_id'] = video_id
             else:
                 logging.warning('Не удалось извлечь идентификатор видео из URL: %s', video_url)
             return redirect(url_for('index'))
 
-        min_length = session.get('min_length', 0)
         video_url = session.get('video_url', '')
-        is_speaking = session.get('is_speaking', False)
+        min_length = session.get('min_length', 0)
 
         return await render_template(
             'index.html',
             video_url=video_url,
-            min_length=min_length,
-            is_speaking=is_speaking
+            min_length=min_length
         )
 
-    @app.route('/stop', methods=['POST'])
-    async def stop():
-        session['is_speaking'] = False
-        return redirect(url_for('index'))
+    @app.websocket('/ws')
+    async def ws():
+        video_id = session.get('video_id')
+        min_length = session.get('min_length', 0)
+        if video_id:
+            await process_chat(video_id, min_length, websocket)
+        else:
+            await websocket.send_json({"message": "Ошибка: Нет активного видео."})
 
     return app
 
