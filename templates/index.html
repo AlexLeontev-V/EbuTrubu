@@ -55,16 +55,13 @@
         <input type="text" name="video_url" placeholder="Введите ссылку на видео" value="{{ video_url }}" required>
         <div class="slider-value">Пауза между сообщениями: <span id="slider-value">{{ min_length }}</span></div>
         <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
-        <button type="submit" id="toggleButton" class="{{ 'green-button' if not is_speaking else 'red-button' }}">
-            {{ 'Включить' if not is_speaking else 'Выключить' }}
-        </button>
+        <button type="submit" id="toggleButton" class="green-button">Включить</button>
     </form>
     <script>
         let synth = window.speechSynthesis;
-
+        let ws;
         const form = document.getElementById('controlForm');
         const button = document.getElementById('toggleButton');
-        const ws = new WebSocket(`ws://${window.location.host}/ws`);
 
         form.onsubmit = async function (event) {
             event.preventDefault();
@@ -73,41 +70,67 @@
                 method: 'POST',
                 body: formData
             });
+
             if (response.ok) {
-                const isSpeaking = button.classList.contains('red-button');
-                button.classList.toggle('green-button');
-                button.classList.toggle('red-button');
-                button.textContent = isSpeaking ? 'Включить' : 'Выключить';
-                if (isSpeaking) {
-                    ws.close();
-                    synth.cancel(); // Прекращаем озвучку сразу
+                // Меняем состояние кнопки сразу после нажатия
+                toggleButtonState();
+
+                // Если кнопка была в состоянии "Включить", запускаем чат
+                if (button.classList.contains('red-button')) {
+                    startChat();
                 } else {
-                    window.location.reload();
+                    stopChat(); // Иначе, останавливаем чат
                 }
             }
         };
 
-        ws.onopen = () => {
-            console.log('WebSocket подключен.');
-        };
+        function toggleButtonState() {
+            if (button.classList.contains('green-button')) {
+                button.classList.remove('green-button');
+                button.classList.add('red-button');
+                button.textContent = 'Выключить';
+            } else {
+                button.classList.remove('red-button');
+                button.classList.add('green-button');
+                button.textContent = 'Включить';
+            }
+        }
 
-        ws.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            console.log('Получено сообщение:', data.message);
-            speak(data.message);
-        };
+        function startChat() {
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            ws = new WebSocket(`${protocol}${window.location.host}/ws`);
 
-        ws.onclose = () => {
-            console.log('WebSocket отключен.');
-        };
+            ws.onopen = () => {
+                console.log('WebSocket подключен.');
+            };
 
-        ws.onerror = (error) => {
-            console.error('Ошибка WebSocket:', error);
-        };
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                console.log('Получено сообщение:', data.message);
+                speak(data.message);
+            };
+
+            ws.onclose = () => {
+                console.log('WebSocket отключен.');
+            };
+
+            ws.onerror = (error) => {
+                console.error('Ошибка WebSocket:', error);
+            };
+        }
+
+        function stopChat() {
+            if (ws) {
+                ws.close(); // Закрываем WebSocket
+                ws = null;
+            }
+            synth.cancel(); // Прекращаем озвучивание
+        }
 
         function speak(text) {
             if ('speechSynthesis' in window) {
                 let utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = 'ru-RU'; // Устанавливаем язык (русский)
                 synth.speak(utterance);
             } else {
                 alert('Ваш браузер не поддерживает Web Speech API.');
