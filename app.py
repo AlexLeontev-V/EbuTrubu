@@ -1,103 +1,175 @@
-import logging
-from quart import Quart, render_template, request, redirect, url_for, session, websocket
-import pytchat
-import asyncio
 import re
+import asyncio
+import jwt
+import datetime
+import redis
+import pytchat
+import hashlib
+import httpx
+from quart import Quart, request, jsonify, make_response, render_template, websocket, redirect, url_for
 
-# Глобальная функция для очистки комментариев от специальных символов
-def clean_comment(comment):
-    cleaned_comment = re.sub(r'[^\w\s\u1F600-\u1F64F]', '', comment)
-    return cleaned_comment
+app = Quart(__name__)
+app.secret_key = 'your_secret_key'
 
-# Функция обработки чата и отправки сообщений на клиент через WebSocket
-async def process_chat(video_id, min_length, ws):
-    try:
-        logging.info('Попытка создать чат для видео ID: %s', video_id)
-        chat = pytchat.create(video_id=video_id)
-        if chat.is_alive():
-            logging.info('Успешно создан чат для видео ID: %s', video_id)
-        else:
-            logging.error('Не удалось подключиться к чату. Проверьте правильность video_id.')
-            return
+# Настройка подключения к Redis
+r = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
 
-        while chat.is_alive():
-            try:
-                items = chat.get().sync_items()
-                if not items:
-                    logging.info('Сообщения пока не поступили. Ожидание...')
-                    await asyncio.sleep(2)  # Задержка перед следующим запросом
-                    continue
+# Таймаут для WebSocket и HTTP-запросов
+REQUEST_TIMEOUT = 10
 
-                for c in items:
-                    message = clean_comment(c.message)
-                    logging.info(f"Получено сообщение: '{message}' от автора: {c.author.name}")
 
-                    if len(message) >= min_length:
-                        full_message = f"{c.author.name} говорит {message}"
-                        await ws.send_json({"message": full_message})  # Отправка сообщения через WebSocket
-                        await asyncio.sleep(2)  # Добавляем небольшую задержку перед следующим сообщением
-                    else:
-                        logging.warning('Сообщение слишком короткое: %s', message)
-            except Exception as e:
-                logging.error(f'Ошибка при обработке сообщений: {str(e)}. Повторная попытка через 5 секунд.')
-                await asyncio.sleep(5)
-    except Exception as e:
-        logging.error(f'Ошибка при подключении к чату: {str(e)}')
+# Функция для хеширования паролей
+def hash_password(password):
+    return hashlib.sha256(password.encode()).hexdigest()
 
-def create_app():
-    app = Quart(__name__)
-    app.secret_key = 'your_secret_key'  # Необходимо для использования сессий
 
-    # Настройка базового логирования для вывода в консоль
-    logging.basicConfig(
-        level=logging.INFO,  # Уровень логирования
-        format='%(asctime)s - %(levelname)s - %(message)s',  # Формат записи
-        handlers=[logging.StreamHandler()]  # Вывод логов в консоль
-    )
-
-    @app.route('/', methods=['GET', 'POST'])
-    async def index():
-        logging.info('Пользователь зашел на сайт.')
-
-        if request.method == 'POST':
-            form = await request.form
-            video_url = form.get('video_url', '')
-            min_length = int(form.get('min_length', 0))
-            logging.info('Пользователь ввел URL видео: %s', video_url)
-            session['video_url'] = video_url
-            session['min_length'] = min_length
-            video_id = extract_video_id(video_url)
-            if video_id:
-                session['video_id'] = video_id
-            else:
-                logging.warning('Не удалось извлечь идентификатор видео из URL: %s', video_url)
-            return redirect(url_for('index'))
-
-        video_url = session.get('video_url', '')
-        min_length = session.get('min_length', 0)
-
-        return await render_template(
-            'index.html',
-            video_url=video_url,
-            min_length=min_length
-        )
-
-    @app.websocket('/ws')
-    async def ws():
-        video_id = session.get('video_id')
-        min_length = session.get('min_length', 0)
-        if video_id:
-            await process_chat(video_id, min_length, websocket)
-        else:
-            await websocket.send_json({"message": "Ошибка: Нет активного видео."})
-
-    return app
-
-# Функция для извлечения идентификатора видео из ссылки
+# Функция для извлечения ID видео из YouTube ссылки
 def extract_video_id(url):
-    match = re.search(r'(?:v=|\/)([0-9A-Za-z_-]{11}).*', url)
-    return match.group(1) if match else None
+    pattern = r"(?:v=|\/)([0-9A-Za-z_-]{11}).*"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1)
+    return None
+
+
+# Регистрация пользователя
+@app.route('/register', methods=['GET', 'POST'])
+async def register():
+    if request.method == 'POST':
+        data = await request.form
+        username = data.get('username')
+        password = data.get('password')
+
+        if r.hget('users', username):
+            return jsonify({'message': 'Пользователь уже существует'}), 400
+
+        hashed_password = hash_password(password)
+        r.hset('users', username, hashed_password)
+
+        return redirect(url_for('login'))
+
+    return await render_template('register.html')
+
+
+# Авторизация пользователя
+@app.route('/login', methods=['GET', 'POST'])
+async def login():
+    if request.method == 'POST':
+        data = await request.form
+        username = data.get('username')
+        password = data.get('password')
+
+        stored_password = r.hget('users', username)
+
+        if not stored_password or stored_password != hash_password(password):
+            return jsonify({'message': 'Неверный логин или пароль'}), 401
+
+        token = jwt.encode({
+            'username': username,
+            'exp': datetime.datetime.utcnow() + datetime.timedelta(hours=1)
+        }, app.secret_key)
+
+        r.set(f'session:{username}', token, ex=3600)
+
+        response = await make_response(redirect(url_for('protected')))
+        response.set_cookie('token', token)
+
+        return response
+
+    return await render_template('login.html')
+
+
+# Защищённая страница
+@app.route('/protected')
+async def protected():
+    token = request.cookies.get('token')
+
+    if not token:
+        return redirect(url_for('login'))
+
+    try:
+        data = jwt.decode(token, app.secret_key, algorithms=["HS256"])
+        stored_token = r.get(f'session:{data["username"]}')
+        if stored_token != token:
+            return jsonify({'message': 'Неверный токен'}), 403
+
+        return await render_template('protected.html', username=data["username"])
+
+    except jwt.ExpiredSignatureError:
+        return jsonify({'message': 'Токен истек'}), 401
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Неверный токен'}), 401
+
+
+# WebSocket для чата
+@app.websocket('/ws')
+async def ws():
+    video_url = websocket.args.get('video_url')
+    if not video_url:
+        await websocket.send_json({'message': 'Ошибка: Не указана ссылка на видео'})
+        return
+
+    video_id = extract_video_id(video_url)
+    if not video_id:
+        await websocket.send_json({'message': 'Ошибка: Не удалось извлечь ID видео'})
+        return
+
+    await websocket.send_json({'message': f'Подключение к видео ID: {video_id}'})
+
+    try:
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+            response = await client.get(f"https://www.youtube.com/embed/{video_id}")
+            response.raise_for_status()
+    except httpx.RequestError as exc:
+        await websocket.send_json({'message': f"Ошибка соединения: {str(exc)}"})
+        return
+    except httpx.HTTPStatusError as exc:
+        await websocket.send_json({'message': f"Ошибка HTTP: {str(exc)}"})
+        return
+    except asyncio.TimeoutError:
+        await websocket.send_json({'message': 'Таймаут подключения к YouTube'})
+        return
+
+    chat = pytchat.create(video_id=video_id)
+
+    while chat.is_alive():
+        try:
+            for c in chat.get().items:
+                await websocket.send_json({'message': f'{c.author.name}: {c.message}'})
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
+        except Exception as e:
+            await websocket.send_json({'message': f'Ошибка в чате: {str(e)}'})
+            break
+
+    await websocket.send_json({'message': 'Чат завершён'})
+
+
+# Выход из системы
+@app.route('/logout')
+async def logout():
+    token = request.cookies.get('token')
+    if not token:
+        return jsonify({'message': 'Токен отсутствует'}), 400
+
+    try:
+        data = jwt.decode(token, app.secret_key, algorithms=["HS256"])
+        r.delete(f'session:{data["username"]}')
+
+        response = await make_response(redirect(url_for('login')))
+        response.delete_cookie('token')
+
+        return response
+    except jwt.InvalidTokenError:
+        return jsonify({'message': 'Неверный токен'}), 401
+
+
+# Главная страница
+@app.route('/')
+async def index():
+    return await render_template('index.html')
+
 
 if __name__ == '__main__':
-    app = create_app()
     app.run(debug=True)

@@ -3,139 +3,44 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EbuTrubu.com</title>
+    <title>Главная страница</title>
     <style>
+        /* Вставляем CSS стили сюда */
         body {
-            font-family: Arial, sans-serif;
-            text-align: center;
+            font-family: 'Arial', sans-serif;
+            background-color: #f4f4f4;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            width: 80%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
             margin-top: 50px;
-            background-color: #f0f8ff;
         }
-        button {
-            padding: 10px 20px;
-            font-size: 16px;
-            margin: 5px;
-            border: none;
-            border-radius: 5px;
-            color: white;
-            cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            transition: transform 0.2s, box-shadow 0.2s;
+        h1 {
+            text-align: center;
+            color: #007BFF;
         }
-        button:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.15);
+        a {
+            color: #007BFF;
+            text-decoration: none;
+            font-size: 18px;
         }
-        button:active {
-            transform: translateY(0);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .green-button {
-            background-color: #4caf50; /* Зеленый */
-        }
-        .red-button {
-            background-color: #f44336; /* Красный */
-        }
-        input[type="text"], input[type="range"] {
-            padding: 10px;
-            font-size: 16px;
-            margin-bottom: 10px;
-            border: 1px solid #ccc;
-            border-radius: 5px;
-        }
-        .slider-value {
-            font-size: 16px;
-            margin-bottom: 20px;
+        a:hover {
+            text-decoration: underline;
         }
     </style>
 </head>
 <body>
-    <h1>EbuTrubu.com</h1>
-    <form id="controlForm" method="post">
-        <input type="text" name="video_url" placeholder="Введите ссылку на видео" value="{{ video_url }}" required>
-        <div class="slider-value">Пауза между сообщениями: <span id="slider-value">{{ min_length }}</span></div>
-        <input type="range" name="min_length" min="0" max="100" value="{{ min_length }}" oninput="document.getElementById('slider-value').innerText = this.value">
-        <button type="submit" id="toggleButton" class="green-button">Включить</button>
-    </form>
-    <script>
-        let synth = window.speechSynthesis;
-        let ws;
-        const form = document.getElementById('controlForm');
-        const button = document.getElementById('toggleButton');
-
-        form.onsubmit = async function (event) {
-            event.preventDefault();
-            const formData = new FormData(form);
-            const response = await fetch(form.action, {
-                method: 'POST',
-                body: formData
-            });
-
-            if (response.ok) {
-                // Меняем состояние кнопки сразу после нажатия
-                toggleButtonState();
-
-                // Если кнопка была в состоянии "Включить", запускаем чат
-                if (button.classList.contains('red-button')) {
-                    startChat();
-                } else {
-                    stopChat(); // Иначе, останавливаем чат
-                }
-            }
-        };
-
-        function toggleButtonState() {
-            if (button.classList.contains('green-button')) {
-                button.classList.remove('green-button');
-                button.classList.add('red-button');
-                button.textContent = 'Выключить';
-            } else {
-                button.classList.remove('red-button');
-                button.classList.add('green-button');
-                button.textContent = 'Включить';
-            }
-        }
-
-        function startChat() {
-            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
-            ws = new WebSocket(`${protocol}${window.location.host}/ws`);
-
-            ws.onopen = () => {
-                console.log('WebSocket подключен.');
-            };
-
-            ws.onmessage = (event) => {
-                const data = JSON.parse(event.data);
-                console.log('Получено сообщение:', data.message);
-                speak(data.message);
-            };
-
-            ws.onclose = () => {
-                console.log('WebSocket отключен.');
-            };
-
-            ws.onerror = (error) => {
-                console.error('Ошибка WebSocket:', error);
-            };
-        }
-
-        function stopChat() {
-            if (ws) {
-                ws.close(); // Закрываем WebSocket
-                ws = null;
-            }
-            synth.cancel(); // Прекращаем озвучивание
-        }
-
-        function speak(text) {
-            if ('speechSynthesis' in window) {
-                let utterance = new SpeechSynthesisUtterance(text);
-                utterance.lang = 'ru-RU'; // Устанавливаем язык (русский)
-                synth.speak(utterance);
-            } else {
-                alert('Ваш браузер не поддерживает Web Speech API.');
-            }
-        }
-    </script>
+    <div class="container">
+        <h1>Добро пожаловать на EbuTrubu.com!</h1>
+        <p><a href="/login">Войти</a> или <a href="/register">Зарегистрироваться</a></p>
+    </div>
 </body>
 </html>
