@@ -7,6 +7,7 @@ import pytchat
 import hashlib
 import httpx
 from quart import Quart, request, jsonify, make_response, render_template, websocket, redirect, url_for
+from assistant import Assistant
 
 app = Quart(__name__)
 app.secret_key = 'your_secret_key'
@@ -15,13 +16,14 @@ app.secret_key = 'your_secret_key'
 r = redis.StrictRedis(host='localhost', port=6379, db=0, decode_responses=True)
 
 # Таймаут для WebSocket и HTTP-запросов
-REQUEST_TIMEOUT = 10
+REQUEST_TIMEOUT = 120  # Увеличиваем время ожидания до 120 секунд
 
+# Инициализация ИИ-помощника
+assistant = Assistant()
 
 # Функция для хеширования паролей
 def hash_password(password):
     return hashlib.sha256(password.encode()).hexdigest()
-
 
 # Функция для извлечения ID видео из YouTube ссылки
 def extract_video_id(url):
@@ -30,7 +32,6 @@ def extract_video_id(url):
     if match:
         return match.group(1)
     return None
-
 
 # Регистрация пользователя
 @app.route('/register', methods=['GET', 'POST'])
@@ -49,7 +50,6 @@ async def register():
         return redirect(url_for('login'))
 
     return await render_template('register.html')
-
 
 # Авторизация пользователя
 @app.route('/login', methods=['GET', 'POST'])
@@ -78,7 +78,6 @@ async def login():
 
     return await render_template('login.html')
 
-
 # Защищённая страница
 @app.route('/protected')
 async def protected():
@@ -100,7 +99,6 @@ async def protected():
     except jwt.InvalidTokenError:
         return jsonify({'message': 'Неверный токен'}), 401
 
-
 # WebSocket для чата
 @app.websocket('/ws')
 async def ws():
@@ -117,7 +115,8 @@ async def ws():
     await websocket.send_json({'message': f'Подключение к видео ID: {video_id}'})
 
     try:
-        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT) as client:
+        # Увеличиваем время ожидания до 120 секунд и отключаем SSL проверку
+        async with httpx.AsyncClient(timeout=REQUEST_TIMEOUT, verify=False) as client:
             response = await client.get(f"https://www.youtube.com/embed/{video_id}")
             response.raise_for_status()
     except httpx.RequestError as exc:
@@ -145,7 +144,6 @@ async def ws():
 
     await websocket.send_json({'message': 'Чат завершён'})
 
-
 # Выход из системы
 @app.route('/logout')
 async def logout():
@@ -164,12 +162,30 @@ async def logout():
     except jwt.InvalidTokenError:
         return jsonify({'message': 'Неверный токен'}), 401
 
+# ИИ-помощник: активация
+@app.route('/activate_assistant', methods=['POST'])
+async def activate_assistant():
+    response = assistant.activate()
+    return jsonify({'message': response})
+
+# ИИ-помощник: деактивация
+@app.route('/deactivate_assistant', methods=['POST'])
+async def deactivate_assistant():
+    response = assistant.deactivate()
+    return jsonify({'message': response})
+
+# ИИ-помощник: предложения тем
+@app.route('/suggest_topics', methods=['POST'])
+async def suggest_topics():
+    data = await request.get_json()
+    messages = data.get('messages', [])
+    response = assistant.suggest_topics(messages)
+    return jsonify({'message': response})
 
 # Главная страница
 @app.route('/')
 async def index():
     return await render_template('index.html')
-
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Чат трансляции</title>
     <style>
+        /* Стили для ползунков и общие стили */
         body {
             font-family: 'Arial', sans-serif;
             background-color: #f4f4f4;
@@ -86,6 +87,16 @@
             background-color: #e9f2ff;
             margin-bottom: 10px;
         }
+
+        /* Стили для ползунков */
+        .slider-container {
+            margin-top: 20px;
+        }
+
+        .slider-container label {
+            display: block;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -98,19 +109,68 @@
             <button type="button" id="toggleChatButton" onclick="toggleChat()">Включить чат</button>
         </form>
 
+        <button type="button" id="assistantButton" onclick="toggleAssistant()">Включить помощника</button>
+        <button type="button" id="toggleSpeechButton" onclick="toggleSpeechSynthesis()">Включить озвучку чата</button>
+
+        <div class="slider-container">
+            <label for="delayRange">Задержка между сообщениями (секунды):</label>
+            <input type="range" id="delayRange" min="1" max="10" step="1" value="1">
+            <span id="delayValue">1</span> секунда
+        </div>
+
+        <div class="slider-container">
+            <label for="speedRange">Скорость озвучки сообщений:</label>
+            <input type="range" id="speedRange" min="0.5" max="2" step="0.1" value="1">
+            <span id="speedValue">1</span>x
+        </div>
+
         <div id="messages"></div>
     </div>
 
     <script>
         let chatActive = false;
+        let assistantActive = false;
+        let speechSynthesisActive = false;  // Озвучка отключена по умолчанию
+        let manualDisconnect = false;  // Новый флаг для отслеживания ручного отключения
         let ws;
-        let synth = window.speechSynthesis; // Сохраняем ссылку на API озвучки
+        let synth = window.speechSynthesis; // API озвучки
+        let assistantSpeaking = false; // Флаг для приостановки озвучки во время речи помощника
+        let speechQueue = []; // Очередь сообщений для озвучки
 
+        // Параметры для ползунков
+        let messageDelay = 1;  // Задержка между сообщениями по умолчанию в секундах
+        let speechSpeed = 1;  // Скорость озвучки по умолчанию
+
+        // Обновляем задержку между сообщениями
+        document.getElementById('delayRange').addEventListener('input', function() {
+            messageDelay = this.value;
+            document.getElementById('delayValue').textContent = messageDelay;
+        });
+
+        // Обновляем скорость озвучки сообщений
+        document.getElementById('speedRange').addEventListener('input', function() {
+            speechSpeed = this.value;
+            document.getElementById('speedValue').textContent = speechSpeed;
+        });
+
+        // Функция для автоматического переключения между ws и wss
+        function getWebSocketProtocol() {
+            return window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        }
+
+        // Управление WebSocket и чатом
         function toggleChat() {
             const videoUrl = document.getElementById('video_url').value;
 
             if (!chatActive) {
-                ws = new WebSocket(`wss://${window.location.host}/ws?video_url=${encodeURIComponent(videoUrl)}`); // Заменил ws на wss
+                manualDisconnect = false;  // Сброс флага, если подключение вручную включается
+                if (ws) {
+                    ws.close();  // Закрываем предыдущее соединение
+                    ws = null;  // Очищаем WebSocket
+                }
+
+                const protocol = getWebSocketProtocol();
+                ws = new WebSocket(`${protocol}${window.location.host}/ws?video_url=${encodeURIComponent(videoUrl)}`);
 
                 ws.onmessage = function (event) {
                     const message = JSON.parse(event.data).message;
@@ -121,33 +181,81 @@
                     messagesDiv.appendChild(newMessage);
                     messagesDiv.scrollTop = messagesDiv.scrollHeight; // Автопрокрутка вниз
 
-                    // Озвучивание сообщения
-                    speakMessage(message);
+                    if (!assistantSpeaking && speechSynthesisActive) {
+                        addToSpeechQueue(message);
+                    }
                 };
 
                 ws.onclose = function () {
                     console.log('Чат отключен');
                     appendSystemMessage('Чат отключен');
+                    if (!manualDisconnect) {  // Если отключение не было вручную
+                        reconnectChat();  // Попытка переподключения через 5 секунд
+                    }
                 };
 
                 ws.onerror = function (error) {
-                    console.error('Ошибка:', error);
+                    console.error('Ошибка соединения:', error);
                     appendSystemMessage('Ошибка соединения');
                 };
 
                 document.getElementById('toggleChatButton').textContent = 'Выключить чат';
                 chatActive = true;
             } else {
-                // Останавливаем WebSocket соединение
                 if (ws) {
+                    manualDisconnect = true;  // Устанавливаем флаг ручного отключения
                     ws.close();
+                    ws = null;
                 }
-
-                // Останавливаем озвучивание
                 stopSpeech();
-
                 document.getElementById('toggleChatButton').textContent = 'Включить чат';
                 chatActive = false;
+            }
+        }
+
+        // Переподключение WebSocket
+        function reconnectChat() {
+            setTimeout(() => {
+                if (!chatActive) {
+                    toggleChat();  // Повторное подключение
+                }
+            }, 5000);  // Переподключение через 5 секунд
+        }
+
+        // Управление активацией озвучки
+        function toggleSpeechSynthesis() {
+            speechSynthesisActive = !speechSynthesisActive;
+            const button = document.getElementById('toggleSpeechButton');
+            button.textContent = speechSynthesisActive ? 'Выключить озвучку чата' : 'Включить озвучку чата';
+        }
+
+        function activateAssistant() {
+            assistantActive = !assistantActive;
+            const button = document.getElementById('assistantButton');
+            button.textContent = assistantActive ? 'Отключить помощника' : 'Включить помощника';
+
+            if (assistantActive) {
+                assistantSpeaking = true; // Помощник говорит
+                stopSpeech(); // Приостанавливаем озвучку сообщений
+
+                const assistantMessage = 'Помощник готов. Задайте вопрос.';
+                speakAssistantMessage(assistantMessage);
+            }
+        }
+
+        // Добавляем сообщение в очередь для озвучивания
+        function addToSpeechQueue(message) {
+            speechQueue.push(message);
+            if (!synth.speaking) {
+                speakNextInQueue();
+            }
+        }
+
+        // Озвучиваем следующее сообщение в очереди
+        function speakNextInQueue() {
+            if (speechQueue.length > 0) {
+                const message = speechQueue.shift();
+                speakMessage(message);
             }
         }
 
@@ -155,21 +263,41 @@
         function speakMessage(message) {
             if (synth) {
                 const utterance = new SpeechSynthesisUtterance(message);
+                const assistantVoice = synth.getVoices().find(voice => voice.name === 'Google русский');
+                utterance.voice = assistantVoice;
                 utterance.lang = 'ru-RU'; // Укажите язык озвучки
+                utterance.rate = speechSpeed;  // Применяем скорость озвучки
+                utterance.onend = function () {
+                    setTimeout(speakNextInQueue, messageDelay * 1000);  // Применяем задержку между сообщениями в секундах
+                };
                 synth.speak(utterance);
             } else {
                 console.error('API SpeechSynthesis не поддерживается в вашем браузере.');
             }
         }
 
-        // Функция для остановки озвучивания
-        function stopSpeech() {
-            if (synth && synth.speaking) {
-                synth.cancel(); // Останавливаем озвучку
+        // Функция для озвучивания сообщений самого помощника
+        function speakAssistantMessage(message) {
+            if (synth) {
+                const assistantVoice = synth.getVoices().find(voice => voice.name === 'Google русский');
+                const utterance = new SpeechSynthesisUtterance(message);
+                utterance.voice = assistantVoice;
+                utterance.lang = 'ru-RU'; // Язык озвучки
+                utterance.onend = function () {
+                    assistantSpeaking = false; // Окончание речи помощника
+                    speakNextInQueue(); // Восстанавливаем озвучку сообщений после речи помощника
+                };
+                synth.speak(utterance);
             }
         }
 
-        // Функция для добавления системных сообщений в чат
+        function stopSpeech() {
+            if (synth && synth.speaking) {
+                synth.cancel(); // Останавливаем озвучку
+                speechQueue = []; // Очищаем очередь сообщений
+            }
+        }
+
         function appendSystemMessage(message) {
             const messagesDiv = document.getElementById('messages');
             const systemMessage = document.createElement('p');
