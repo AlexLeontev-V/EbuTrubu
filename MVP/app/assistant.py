@@ -1,5 +1,3 @@
-# assistant.py
-
 import random
 
 class Assistant:
@@ -36,10 +34,24 @@ class Assistant:
                 keywords.append('Технологии')
             elif 'игра' in msg.lower():
                 keywords.append('Игры')
-        return keywords
+            elif 'новость' in msg.lower():
+                keywords.append('Новости')
+        return keywords if keywords else self.topics
 
     def respond_to_command(self, command):
         """Ответ помощника на голосовые команды стримера"""
-        if 'помощник' in command.lower() and 'темы' in command.lower():
-            return self.suggest_topics([])
+        if 'помощник' in command.lower():
+            if 'темы' in command.lower():
+                return self.suggest_topics([])
+            elif 'статистика' in command.lower():
+                return self.provide_statistics()
+            elif 'пауза' in command.lower():
+                return "Трансляция приостановлена."
+            elif 'возобновить' in command.lower():
+                return "Трансляция возобновлена."
         return "Команда не распознана."
+
+    def provide_statistics(self):
+        """Пример функции для возврата статистики трансляции"""
+        viewers = random.randint(10, 100)  # Пример количества зрителей
+        return f"Текущая статистика: {viewers} зрителей на стриме."

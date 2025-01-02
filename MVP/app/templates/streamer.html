@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабинет стримера</title>
+    <style>
+        /* Основные стили страницы */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        header, nav, .container, footer {
+            max-width: 1200px;
+            margin: auto;
+            padding: 20px;
+        }
+        header {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        header h1 {
+            margin: 0;
+        }
+        nav {
+            background-color: #0056b3;
+            text-align: center;
+        }
+        nav a {
+            color: white;
+            margin: 0 15px;
+            text-decoration: none;
+            font-size: 1.1em;
+        }
+        nav a:hover {
+            color: #ffdd57;
+        }
+        .container {
+            background-color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+        h2 {
+            color: #007BFF;
+            border-bottom: 2px solid #007BFF;
+            padding-bottom: 5px;
+        }
+        .button {
+            display: inline-block;
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            text-decoration: none;
+            text-align: center;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+        #notifications, #keywords, #stats {
+            margin-bottom: 20px;
+            padding: 15px;
+            background-color: #e9f7fe;
+            border: 1px solid #bde5f8;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Кабинет стримера</h1>
+        <a href="/logout" class="button">Выйти</a>
+    </header>
+    <nav>
+        <a href="/streamer/home">Главная</a>
+        <a href="/streamer/streams">Мои трансляции</a>
+        <a href="/streamer/campaigns">Рекламные кампании</a>
+        <a href="/streamer/settings">Настройки</a>
+    </nav>
+    <div class="container">
+        <section id="notifications">
+            <h2>Уведомления</h2>
+            <p>Здесь будут отображаться уведомления от рекламодателей.</p>
+        </section>
+        <section id="keywords">
+            <h2>Ключевые слова для упоминания</h2>
+            <p>Список ключевых слов для текущих кампаний.</p>
+        </section>
+        <section id="stats">
+            <h2>Статистика</h2>
+            <p>Графики и данные по упоминаниям ключевых слов и доходам.</p>
+        </section>
+        <a href="#" class="button">Начать трансляцию</a>
+    </div>
+    <footer>
+        &copy; 2024 EbuTrubu.com. Все права защищены.
+    </footer>
+</body>
+</html>

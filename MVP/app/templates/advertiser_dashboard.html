@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block title %}Панель рекламодателя{% endblock %}
+
+{% block content %}
+    <h2>Добро пожаловать, {{ username }}!</h2>
+    <h3>Панель управления рекламодателя</h3>
+
+    <div class="section">
+        <h3>Создать новую кампанию</h3>
+        <a href="{{ url_for('advertiser.create_campaign') }}" class="button">Создать кампанию</a>
+    </div>
+
+    <div class="section">
+        <h3>Управление балансом</h3>
+        <p>Текущий баланс: <span id="balance">0 ₽</span></p>
+        <a href="{{ url_for('advertiser.manage_balance') }}" class="button">Пополнить баланс</a>
+    </div>
+
+    <div class="section">
+        <h3>Активные кампании</h3>
+        <p>Здесь вы можете увидеть статистику активных кампаний.</p>
+        <!-- Здесь может быть динамически загружаемая информация -->
+    </div>
+
+    <a href="{{ url_for('index') }}" class="nav-button">Назад на главную</a>
+{% endblock %}

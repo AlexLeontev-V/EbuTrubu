@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Панель управления стримером</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: #fff;
+            padding: 30px;
+            box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.2);
+            border-radius: 8px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #007bff;
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 16px;
+        }
+        .btn {
+            display: inline-block;
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            font-size: 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            background-color: #0056b3;
+        }
+        .stats, .chat {
+            text-align: left;
+            margin-top: 20px;
+            border-top: 1px solid #ddd;
+            padding-top: 15px;
+        }
+        .stats p {
+            margin: 5px 0;
+            font-size: 16px;
+        }
+        .chat {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            padding: 10px;
+            background-color: #f9f9f9;
+        }
+        .chat-message {
+            margin-bottom: 10px;
+        }
+        .chat-message span {
+            font-weight: bold;
+            color: #333;
+        }
+        .back-link {
+            display: inline-block;
+            margin-top: 15px;
+            text-decoration: none;
+            color: #007bff;
+        }
+        .back-link:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>Добро пожаловать, {{ username }}!</h1>
+
+    <div class="form-group">
+        <label for="video-url">Ссылка на трансляцию:</label>
+        <input type="text" id="video-url" placeholder="Введите ссылку на YouTube">
+        <button class="btn" onclick="connectStream()">Подключить трансляцию</button>
+    </div>
+
+    <div class="stats">
+        <h3>Статистика</h3>
+        <p>Текущие зрители: <span id="viewer-count">0</span></p>
+        <p>Время трансляции: <span id="stream-duration">00:00:00</span></p>
+    </div>
+
+    <div class="chat">
+        <h3>Чат</h3>
+        <div id="chat-messages">
+            <!-- Сообщения из чата будут добавляться сюда -->
+        </div>
+    </div>
+
+    <a href="/" class="back-link">Назад на главную</a>
+</div>
+
+<script>
+    let ws;
+
+    async function connectStream() {
+        const videoUrl = document.getElementById('video-url').value;
+        const response = await fetch('/streamer/connect_stream', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ video_url: videoUrl })
+        });
+
+        const data = await response.json();
+        if (data.status === "connected") {
+            startChatWebSocket();
+        } else {
+            alert("Ошибка подключения к трансляции: " + data.message);
+        }
+    }
+
+    function startChatWebSocket() {
+        ws = new WebSocket(`ws://${window.location.host}/streamer/ws/chat`);
+
+        ws.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+
+            if (data.viewers !== undefined) {
+                document.getElementById("viewer-count").textContent = data.viewers;
+            }
+            if (data.duration !== undefined) {
+                document.getElementById("stream-duration").textContent = data.duration;
+            }
+
+            if (data.messages) {
+                const chatMessages = document.getElementById("chat-messages");
+
+                data.messages.forEach(message => {
+                    const messageElement = document.createElement("div");
+                    messageElement.classList.add("chat-message");
+                    messageElement.innerHTML = `<span>${message.author}:</span> ${message.text}`;
+                    chatMessages.appendChild(messageElement);
+                });
+
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+            }
+        };
+
+        ws.onclose = function() {
+            alert("Подключение к чату закрыто.");
+        };
+    }
+</script>
+</body>
+</html>

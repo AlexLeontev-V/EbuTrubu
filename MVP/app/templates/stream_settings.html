@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block title %}Настройки стрима{% endblock %}
+
+{% block content %}
+<div class="container">
+    <h2>Настройки стрима</h2>
+
+    <form action="{{ url_for('streamer.stream_settings') }}" method="POST">
+        <div class="form-group">
+            <label for="stream_title">Название стрима:</label>
+            <input type="text" id="stream_title" name="stream_title" required>
+        </div>
+
+        <div class="form-group">
+            <label for="keywords">Ключевые слова:</label>
+            <input type="text" id="keywords" name="keywords" placeholder="Введите ключевые слова через запятую" required>
+        </div>
+
+        <button type="submit" class="button">Сохранить настройки</button>
+    </form>
+
+    <a href="{{ url_for('dashboard') }}" class="button">Назад</a>
+</div>
+{% endblock %}
