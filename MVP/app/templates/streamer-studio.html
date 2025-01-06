@@ -1,0 +1,1031 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EbuTrubu Studio</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7C3AED;
+            --primary-dark: #6D28D9;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+            --gray: #6B7280;
+            --sidebar-width: 250px;
+            --top-bar-height: 80px;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Боковая панель */
+        .sidebar {
+            width: var(--sidebar-width);
+            background: white;
+            border-right: 1px solid #E5E7EB;
+            padding: 2rem 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            margin-bottom: 2rem;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--gray);
+            text-decoration: none;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            transition: all 0.3s;
+        }
+
+        .nav-item:hover, .nav-item.active {
+            background: #F3F4F6;
+            color: var(--primary);
+        }
+
+        .nav-item i {
+            margin-right: 0.75rem;
+            font-size: 1.25rem;
+        }
+
+        /* Основной контент */
+        .main-content {
+            flex: 1;
+            margin-left: var(--sidebar-width);
+            padding: 2rem;
+            min-height: 100vh;
+            background: #F9FAFB;
+        }
+
+        /* Верхняя панель */
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem 0;
+            height: var(--top-bar-height);
+            position: sticky;
+            top: 0;
+            background: #F9FAFB;
+            z-index: 90;
+        }
+
+        .stream-status {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #EF4444;
+        }
+
+        .status-indicator.live {
+            background: #10B981;
+        }
+
+        /* Сетка с виджетами */
+        .widgets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .widget {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        .widget-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .widget-title {
+            font-weight: 600;
+            color: var(--dark);
+        }
+
+        /* Чат и ассистент */
+        .stream-controls {
+            display: flex;
+            gap: 1.5rem;
+            height: calc(100vh - var(--top-bar-height) - 200px);
+        }
+
+        .chat-container {
+            flex: 2;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: #F9FAFB;
+            animation: fadeIn 0.3s ease-in-out;
+            border-left: 3px solid var(--primary);
+            transition: all 0.2s ease;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .message strong {
+            color: var(--primary);
+            margin-right: 0.5rem;
+        }
+
+        .assistant-panel {
+            flex: 1;
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Кнопки и элементы управления */
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        /* Статистика */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-label {
+            color: var(--gray);
+            font-size: 0.875rem;
+        }
+
+        .stream-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .stream-url-form {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .stream-url-input {
+            width: 400px;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .stream-url-input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .stream-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .status-indicator {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #EF4444;
+            transition: background-color 0.3s;
+        }
+
+        .status-indicator.connected {
+            background: #10B981;
+        }
+
+        .chat-controls {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .btn i {
+            margin-right: 0.25rem;
+        }
+
+        .btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .message {
+            padding: 0.5rem;
+            border-bottom: 1px solid #E5E7EB;
+        }
+
+        .message:hover {
+            background: #EEF2FF;
+            transform: translateX(2px);
+        }
+
+        .message strong {
+            color: var(--primary);
+        }
+
+        /* Стили для контейнеров */
+        .content-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1rem;
+            margin-top: 1rem;
+        }
+
+        .chat-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            height: calc(100vh - 250px);
+            display: flex;
+            flex-direction: column;
+        }
+
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1rem;
+        }
+
+        .assistant-panel {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            padding: 1rem;
+            height: calc(100vh - 250px);
+        }
+
+        .assistant-content {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            padding: 1rem;
+            height: calc(100% - 60px);
+            overflow-y: auto;
+        }
+
+        .command-list {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .command-list h3 {
+            margin-bottom: 0.5rem;
+            color: var(--dark);
+        }
+
+        .command-list ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .command-list li {
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+            color: var(--gray);
+        }
+
+        .assistant-response {
+            flex: 1;
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            overflow-y: auto;
+        }
+
+        .assistant-message {
+            padding: 0.5rem;
+            margin-bottom: 0.5rem;
+            background: white;
+            border-radius: 0.25rem;
+            border-left: 3px solid var(--primary);
+        }
+
+        .voice-recording-panel {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-top: 1.5rem;
+        }
+
+        .recording-stats {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        #audioVisualizer {
+            flex: 1;
+            height: 50px;
+            background: #F3F4F6;
+            border-radius: 0.5rem;
+        }
+
+        .word-stats {
+            background: #F9FAFB;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            margin-top: 1rem;
+        }
+
+        .recording .btn-outline {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tts-settings {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            padding: 10px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .slider-container label {
+            font-size: 12px;
+            color: var(--gray);
+        }
+
+        input[type="range"] {
+            width: 150px;
+        }
+
+        .btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            border-radius: 5px;
+            z-index: 1000;
+            color: white;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        .notification.error {
+            background-color: #f44336;
+        }
+
+        .notification.success {
+            background-color: #4caf50;
+        }
+
+        .notification.info {
+            background-color: #2196f3;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="/" class="logo">
+            <span>EbuTrubu</span>
+        </a>
+        <nav>
+            <a href="#" class="nav-item active">
+                <i>📊</i>
+                <span>Панель управления</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>🎥</i>
+                <span>Трансляция</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>💬</i>
+                <span>Чат</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>🤖</i>
+                <span>Ассистент</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>📈</i>
+                <span>Аналитика</span>
+            </a>
+            <a href="#" class="nav-item">
+                <i>⚙️</i>
+                <span>Настройки</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <h1>Панель управления</h1>
+            <div class="stream-controls">
+                <div class="stream-url-form" id="streamUrlForm">
+                    <input 
+                        type="text" 
+                        id="streamUrl" 
+                        placeholder="Вставьте ссылку на YouTube трансляцию"
+                        class="stream-url-input"
+                    >
+                    <button type="button" class="btn btn-primary" id="connectStreamBtn">
+                        <i>🎥</i> Начать трансляцию
+                    </button>
+                </div>
+                <div class="stream-status">
+                    <span id="statusIndicator" class="status-indicator"></span>
+                    <span id="statusText">Не подключено</span>
+                </div>
+            </div>
+            <div class="user-menu">
+                <span>{{ username }}</span>
+            </div>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value" id="viewerCount">0</div>
+                <div class="stat-label">Зрители</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="messageCount">0</div>
+                <div class="stat-label">Сообщений</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">0</div>
+                <div class="stat-label">Ключевых слов</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="streamUptime">0:00</div>
+                <div class="stat-label">Время в эфире</div>
+            </div>
+        </div>
+
+        <div class="stream-controls">
+            <div class="chat-container">
+                <div class="widget-header">
+                    <h2 class="widget-title">Чат трансляции</h2>
+                    <div class="chat-controls">
+                        <button id="toggleTTS" class="btn btn-outline" onclick="toggleTTS()">
+                            <i>🔊</i> Включить озвучку
+                        </button>
+                        <button id="toggleSettings" class="btn btn-outline">
+                            <i>⚙️</i> Настройки
+                        </button>
+                        <div id="ttsSettings" class="tts-settings" style="display: none;">
+                            <div class="setting-item">
+                                <label for="delayRange">Задержка между сообщениями (сек):</label>
+                                <input type="range" id="delayRange" min="0" max="5" step="0.5" value="1">
+                                <span id="delayValue">1</span>
+                            </div>
+                            <div class="setting-item">
+                                <label for="speedRange">Скорость речи:</label>
+                                <input type="range" id="speedRange" min="0.5" max="2" step="0.1" value="1">
+                                <span id="speedValue">1</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="chat-messages" id="chatMessages">
+                    <!-- Сообщения чата будут добавляться здесь -->
+                </div>
+            </div>
+
+            <div class="assistant-panel">
+                <div class="widget-header">
+                    <h2 class="widget-title">AI Ассистент</h2>
+                    <button id="toggleAssistant" class="btn btn-outline" onclick="toggleAssistant()">
+                        Включить
+                    </button>
+                </div>
+                <div class="assistant-content">
+                    <div class="command-list">
+                        <h3>Доступные команды:</h3>
+                        <ul>
+                            <li>статистика - Показать статистику чата</li>
+                            <li>очистить чат - Очистить чат</li>
+                            <li>мут [пользователь] - Замутить пользователя</li>
+                            <li>размут [пользователь] - Размутить пользователя</li>
+                            <li>бан [пользователь] - Забанить пользователя</li>
+                            <li>разбан [пользователь] - Разбанить пользователя</li>
+                            <li>режим чата [режим] - Установить режим чата</li>
+                            <li>медленный режим [секунды] - Установить задержку</li>
+                            <li>эмодзи - Включить/выключить эмодзи</li>
+                            <li>подписчики - Режим только для подписчиков</li>
+                            <li>фолловеры - Режим только для фолловеров</li>
+                            <li>таймер [название] [секунды] - Установить таймер</li>
+                            <li>напоминание [текст] - Создать напоминание</li>
+                            <li>опрос [вопрос | вариант1 | вариант2] - Создать опрос</li>
+                            <li>розыгрыш [приз] - Начать розыгрыш</li>
+                            <li>команда [название] [ответ] - Добавить команду</li>
+                            <li>удалить команду [название] - Удалить команду</li>
+                            <li>модератор [пользователь] - Назначить модератора</li>
+                            <li>снять модератора [пользователь] - Снять модератора</li>
+                            <li>помощь - Показать список команд</li>
+                        </ul>
+                    </div>
+                    <div id="assistantResponse" class="assistant-response"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="voice-recording-panel">
+            <div class="widget-header">
+                <h2 class="widget-title">Запись голоса</h2>
+                <button id="startRecording" class="btn btn-outline" onclick="toggleRecording()">
+                    <i>🎤</i> Начать запись
+                </button>
+            </div>
+            <div class="recording-stats">
+                <div id="audioVisualizer"></div>
+                <div id="recordingTime">00:00</div>
+            </div>
+            <div id="wordStats" class="word-stats">
+                <h3>Статистика слов</h3>
+                <div id="commonWords"></div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // Глобальные переменные
+        let ws = null;
+        let isTTSEnabled = false;
+        let isAssistantEnabled = false;
+        let isStreamConnected = false;
+        let isRecording = false;
+        
+        // Инициализация синтезатора речи
+        const synth = window.speechSynthesis;
+        let selectedVoice = null;
+
+        // Загрузка голосов при старте
+        function loadVoices() {
+            let voices = synth.getVoices();
+            if (voices.length === 0) {
+                synth.onvoiceschanged = () => {
+                    voices = synth.getVoices();
+                    selectedVoice = voices.find(voice => voice.lang === 'ru-RU') || 
+                                  voices.find(voice => voice.lang.startsWith('ru')) ||
+                                  voices[0];
+                    console.log('Загружены голоса:', voices);
+                    console.log('Выбран голос:', selectedVoice);
+                };
+            } else {
+                selectedVoice = voices.find(voice => voice.lang === 'ru-RU') || 
+                              voices.find(voice => voice.lang.startsWith('ru')) ||
+                              voices[0];
+                console.log('Загружены голоса:', voices);
+                console.log('Выбран голос:', selectedVoice);
+            }
+        }
+
+        // Функция для озвучки сообщения
+        function speakMessage(author, text) {
+            if (!isTTSEnabled) return;
+            
+            try {
+                const utterance = new SpeechSynthesisUtterance(`${author} говорит: ${text}`);
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+                
+                // Настройки озвучки
+                utterance.rate = parseFloat(document.getElementById('speedRange')?.value || 1);
+                utterance.pitch = 1;
+                utterance.volume = 1;
+                
+                console.log('Озвучка сообщения:', author, text);
+                synth.speak(utterance);
+            } catch (error) {
+                console.error('Ошибка озвучки:', error);
+                showNotification('Ошибка при озвучке сообщения', 'error');
+            }
+        }
+
+        // Простая функция переключения TTS
+        function toggleTTS() {
+            console.log('Нажата кнопка TTS');  // Для отладки
+            isTTSEnabled = !isTTSEnabled;
+            const button = document.getElementById('toggleTTS');
+            
+            if (isTTSEnabled) {
+                button.innerHTML = '<i>🔊</i> Выключить озвучку';
+                button.classList.add('active');
+                showNotification('Озвучка включена', 'success');
+            } else {
+                button.innerHTML = '<i>🔊</i> Включить озвучку';
+                button.classList.remove('active');
+                showNotification('Озвучка выключена', 'info');
+            }
+        }
+
+        // Функция инициализации голосов
+        function initVoices() {
+            let voices = synth.getVoices();
+            if (voices.length === 0) {
+                synth.onvoiceschanged = () => {
+                    voices = synth.getVoices();
+                    selectedVoice = voices.find(voice => voice.lang === 'ru-RU') || 
+                                   voices.find(voice => voice.lang.startsWith('ru')) ||
+                                   voices[0];
+                    console.log('Выбран голос:', selectedVoice);
+                };
+            } else {
+                selectedVoice = voices.find(voice => voice.lang === 'ru-RU') || 
+                               voices.find(voice => voice.lang.startsWith('ru')) ||
+                               voices[0];
+                console.log('Выбран голос:', selectedVoice);
+            }
+        }
+
+        // Функция для озвучки сообщения
+        function speakMessage(author, text) {
+            if (!isTTSEnabled) return;
+            
+            try {
+                const utterance = new SpeechSynthesisUtterance(`${author} говорит: ${text}`);
+                
+                if (selectedVoice) {
+                    utterance.voice = selectedVoice;
+                }
+                
+                // Настройки озвучки
+                utterance.rate = parseFloat(document.getElementById('speedRange')?.value || 1);
+                utterance.pitch = 1;
+                utterance.volume = 1;
+                
+                synth.speak(utterance);
+            } catch (error) {
+                console.error('Ошибка озвучки:', error);
+                showNotification('Ошибка при озвучке сообщения', 'error');
+            }
+        }
+
+        // Функция переключения настроек
+        function toggleSettings() {
+            const settings = document.getElementById('ttsSettings');
+            const isVisible = settings.style.display !== 'none';
+            settings.style.display = isVisible ? 'none' : 'block';
+        }
+
+        // Функция подключения к трансляции
+        async function connectStream() {
+            const button = document.getElementById('connectStreamBtn');
+            const streamUrl = document.getElementById('streamUrl').value;
+
+            if (isStreamConnected) {
+                // Отключаем трансляцию
+                if (ws) {
+                    ws.close();
+                    ws = null;
+                }
+                isStreamConnected = false;
+                button.innerHTML = '<i>🎥</i> Начать трансляцию';
+                button.classList.remove('active');
+                document.getElementById('statusText').textContent = 'Отключено';
+                document.getElementById('statusIndicator').classList.remove('connected');
+                document.getElementById('chatMessages').innerHTML = '';
+                return;
+            }
+
+            if (!streamUrl) {
+                showNotification('Введите ссылку на трансляцию', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('/streamer/connect_stream', {
+                    method: 'POST',
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({ video_url: streamUrl })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.status === 'connected') {
+                    isStreamConnected = true;
+                    button.innerHTML = '<i>⏹️</i> Остановить трансляцию';
+                    button.classList.add('active');
+                    document.getElementById('statusText').textContent = 'Подключено';
+                    document.getElementById('statusIndicator').classList.add('connected');
+                    connectWebSocket();
+                    showNotification('Трансляция успешно подключена', 'success');
+                } else {
+                    showNotification(data.message || 'Ошибка подключения', 'error');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showNotification('Ошибка подключения к трансляции', 'error');
+                button.innerHTML = '<i>🎥</i> Начать трансляцию';
+                button.classList.remove('active');
+            }
+        }
+
+        // Функция для переключения ассистента
+        function toggleAssistant() {
+            isAssistantEnabled = !isAssistantEnabled;
+            const button = document.getElementById('toggleAssistant');
+            
+            if (isAssistantEnabled) {
+                button.textContent = 'Выключить';
+                button.classList.add('active');
+                fetch('/streamer/toggle_assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: true })
+                });
+            } else {
+                button.textContent = 'Включить';
+                button.classList.remove('active');
+                fetch('/streamer/toggle_assistant', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ active: false })
+                });
+            }
+        }
+
+        // Инициализация при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            // Добавляем обработчики событий для кнопок
+            document.getElementById('connectStreamBtn').onclick = connectStream;
+            document.getElementById('toggleTTS').onclick = toggleTTS;
+            document.getElementById('toggleSettings').onclick = toggleSettings;
+            document.getElementById('toggleAssistant').onclick = toggleAssistant;
+            document.getElementById('startRecording').onclick = toggleRecording;
+
+            // Инициализируем голоса
+            initVoices();
+            
+            // Инициализируем слайдеры настроек
+            const speedRange = document.getElementById('speedRange');
+            if (speedRange) {
+                speedRange.addEventListener('input', function() {
+                    document.getElementById('speedValue').textContent = this.value;
+                });
+            }
+        });
+
+        // Функция для записи голоса
+        function toggleRecording() {
+            const button = document.getElementById('startRecording');
+            if (!isRecording) {
+                button.innerHTML = '<i>⏹️</i> Остановить запись';
+                button.classList.add('active');
+                startRecording();
+            } else {
+                button.innerHTML = '<i>🎤</i> Начать запись';
+                button.classList.remove('active');
+                stopRecording();
+            }
+            isRecording = !isRecording;
+        }
+
+        // Функции для работы с записью
+        function startRecording() {
+            // Здесь код для начала записи
+            console.log('Начало записи');
+        }
+
+        function stopRecording() {
+            // Здесь код для остановки записи
+            console.log('Остановка записи');
+        }
+
+        // После функции connectStream добавляем функцию connectWebSocket
+
+        function connectWebSocket() {
+            if (ws) {
+                try {
+                    ws.close();
+                } catch (e) {
+                    console.error('Ошибка закрытия WebSocket:', e);
+                }
+                ws = null;
+            }
+
+            try {
+                const token = document.cookie.split('; ')
+                    .find(row => row.startsWith('token='))
+                    ?.split('=')[1];
+
+                if (!token) {
+                    showNotification('Ошибка авторизации', 'error');
+                    return;
+                }
+
+                const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+                const wsUrl = `${protocol}${window.location.host}/streamer/ws/chat?token=${encodeURIComponent(token)}`;
+                console.log('Подключение к WebSocket:', wsUrl);
+                
+                ws = new WebSocket(wsUrl);
+
+                ws.onopen = function() {
+                    console.log('WebSocket подключен');
+                    showNotification('Подключение установлено', 'success');
+                };
+
+                ws.onmessage = function(event) {
+                    try {
+                        const data = JSON.parse(event.data);
+                        console.log('Получено сообщение WebSocket:', data);
+                        
+                        if (data.type === 'error') {
+                            showNotification(data.message, 'error');
+                            if (ws) {
+                                ws.close();
+                                ws = null;
+                            }
+                            return;
+                        }
+
+                        if (data.type === 'connection' && data.status === 'connected') {
+                            document.getElementById('statusText').textContent = 'Подключено';
+                            document.getElementById('statusIndicator').classList.add('connected');
+                            return;
+                        }
+
+                        if (data.type === 'messages' && data.messages) {
+                            const chatMessages = document.getElementById('chatMessages');
+                            data.messages.forEach(message => {
+                                const messageDiv = document.createElement('div');
+                                messageDiv.className = 'message';
+                                messageDiv.innerHTML = `
+                                    <strong>${message.author}:</strong> 
+                                    <span>${message.text}</span>
+                                    <small>${new Date(message.timestamp).toLocaleTimeString()}</small>
+                                `;
+                                chatMessages.appendChild(messageDiv);
+                                
+                                if (isTTSEnabled) {
+                                    speakMessage(message.author, message.text);
+                                }
+                            });
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }
+                    } catch (error) {
+                        console.error('Ошибка обработки сообщения:', error);
+                        showNotification('Ошибка обработки сообщения', 'error');
+                    }
+                };
+
+                ws.onclose = function(event) {
+                    console.log('WebSocket отключен:', event);
+                    showNotification('Соединение с чатом прервано', 'error');
+                    document.getElementById('statusText').textContent = 'Переподключение...';
+                    document.getElementById('statusIndicator').classList.remove('connected');
+                    ws = null;
+                    if (isStreamConnected) {
+                        setTimeout(connectWebSocket, 3000);
+                    }
+                };
+
+                ws.onerror = function(error) {
+                    console.error('WebSocket ошибка:', error);
+                    showNotification('Ошибка подключения к чату', 'error');
+                    document.getElementById('statusText').textContent = 'Ошибка подключения';
+                    document.getElementById('statusIndicator').classList.remove('connected');
+                };
+            } catch (error) {
+                console.error('Ошибка создания WebSocket:', error);
+                showNotification('Ошибка создания подключения', 'error');
+            }
+        }
+    </script>
+</body>
+</html> 

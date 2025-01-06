@@ -2,57 +2,234 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <title>Главная страница</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EbuTrubu - Умный ассистент для стримеров</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(120deg, #f4f4f4, #e2f1ff);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
+        :root {
+            --primary: #7C3AED;
+            --primary-dark: #6D28D9;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+            --gray: #6B7280;
+        }
+
+        * {
             margin: 0;
+            padding: 0;
+            box-sizing: border-box;
         }
-        .container {
-            background-color: #ffffff;
-            box-shadow: 0px 8px 16px rgba(0, 0, 0, 0.2);
-            border-radius: 12px;
-            padding: 40px;
-            text-align: center;
-            max-width: 500px;
-            width: 90%;
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            color: var(--dark);
+            line-height: 1.5;
         }
-        h1 {
-            color: #007BFF;
-            font-size: 2em;
-            margin-bottom: 20px;
+
+        .navbar {
+            background: white;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            padding: 1rem;
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
         }
-        .button {
-            display: inline-block;
-            padding: 10px 20px;
-            margin-top: 20px;
-            color: white;
-            background-color: #007BFF;
+
+        .nav-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
             text-decoration: none;
-            font-size: 1em;
-            border-radius: 8px;
-            transition: background-color 0.3s;
-            cursor: pointer;
-            border: none;
-            margin: 5px;
         }
-        .button:hover {
-            background-color: #0056b3;
+
+        .nav-links {
+            display: flex;
+            gap: 2rem;
+        }
+
+        .nav-links a {
+            text-decoration: none;
+            color: var(--gray);
+            font-weight: 500;
+            transition: color 0.3s;
+        }
+
+        .nav-links a:hover {
+            color: var(--primary);
+        }
+
+        .auth-buttons {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.5rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-decoration: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .btn-outline {
+            border: 2px solid var(--primary);
+            color: var(--primary);
+            background: transparent;
+        }
+
+        .btn-outline:hover {
+            background: var(--primary);
+            color: white;
+        }
+
+        .hero {
+            padding: 8rem 1rem 4rem;
+            text-align: center;
+            background: linear-gradient(135deg, #7C3AED11 0%, #10B98111 100%);
+        }
+
+        .hero-container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .hero p {
+            font-size: 1.25rem;
+            color: var(--gray);
+            max-width: 600px;
+            margin: 0 auto 2rem;
+        }
+
+        .features {
+            padding: 4rem 1rem;
+            background: white;
+        }
+
+        .features-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+        }
+
+        .feature-card {
+            padding: 2rem;
+            border-radius: 1rem;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .feature-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .feature-icon {
+            font-size: 2rem;
+            color: var(--primary);
+            margin-bottom: 1rem;
+        }
+
+        .feature-card h3 {
+            font-size: 1.25rem;
+            margin-bottom: 1rem;
+        }
+
+        .feature-card p {
+            color: var(--gray);
+        }
+
+        @media (max-width: 768px) {
+            .nav-links {
+                display: none;
+            }
+
+            .hero h1 {
+                font-size: 2.5rem;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Добро пожаловать на EbuTrubu!</h1>
-        <p>Выберите свою роль для продолжения:</p>
-        <a href="{{ url_for('register', role='streamer') }}" class="button">Я стример</a>
-        <a href="{{ url_for('register', role='advertiser') }}" class="button" style="background-color: #28a745;">Я рекламодатель</a>
-        <p>Уже зарегистрированы? <a href="{{ url_for('login') }}">Войти</a></p>
-    </div>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="/" class="logo">EbuTrubu</a>
+            <div class="nav-links">
+                <a href="#features">Возможности</a>
+                <a href="#how-it-works">Как это работает</a>
+                <a href="#pricing">Цены</a>
+            </div>
+            <div class="auth-buttons">
+                <a href="/auth" class="btn btn-outline">Войти</a>
+                <a href="/auth?register=true" class="btn btn-primary">Регистрация</a>
+            </div>
+        </div>
+    </nav>
+
+    <section class="hero">
+        <div class="hero-container">
+            <h1>Умный ассистент для ваших стримов</h1>
+            <p>
+                Автоматизируйте взаимодействие с чатом, увеличивайте вовлеченность
+                и монетизируйте контент с помощью искусственного интеллекта
+            </p>
+            <div class="hero-buttons">
+                <a href="/auth?role=streamer" class="btn btn-primary">Начать стримить</a>
+                <a href="/auth?role=advertiser" class="btn btn-outline">Разместить рекламу</a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features" id="features">
+        <div class="features-container">
+            <div class="feature-card">
+                <div class="feature-icon">🤖</div>
+                <h3>AI Ассистент</h3>
+                <p>Умный помощник, который анализирует чат и помогает взаимодействовать со зрителями</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">💬</div>
+                <h3>Умная модерация</h3>
+                <p>Автоматическая модерация чата и защита от спама</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">📊</div>
+                <h3>Аналитика</h3>
+                <p>Подробная статистика и аналитика вашего стрима</p>
+            </div>
+        </div>
+    </section>
 </body>
 </html>

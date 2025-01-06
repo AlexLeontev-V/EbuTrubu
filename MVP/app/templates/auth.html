@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EbuTrubu - Авторизация</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #7C3AED;
+            --primary-dark: #6D28D9;
+            --secondary: #10B981;
+            --dark: #1F2937;
+            --light: #F9FAFB;
+            --gray: #6B7280;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--light);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+
+        .auth-container {
+            background: white;
+            border-radius: 1rem;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            width: 100%;
+            max-width: 900px;
+            display: flex;
+            overflow: hidden;
+            position: relative;
+            min-height: 600px;
+        }
+
+        .auth-form {
+            flex: 1;
+            padding: 3rem;
+            transition: all 0.5s ease-in-out;
+        }
+
+        .auth-image {
+            flex: 1;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            padding: 3rem;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .auth-image::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url('path/to/pattern.svg') center/cover;
+            opacity: 0.1;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+            text-decoration: none;
+            margin-bottom: 2rem;
+            display: inline-block;
+        }
+
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 2rem;
+            color: var(--dark);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            font-weight: 500;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            border: none;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-dark);
+        }
+
+        .auth-switch {
+            text-align: center;
+            margin-top: 2rem;
+        }
+
+        .auth-switch a {
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .role-select {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .role-option {
+            flex: 1;
+            padding: 1rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .role-option.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: white;
+        }
+
+        .role-option:hover {
+            border-color: var(--primary);
+        }
+
+        .auth-image h2 {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .auth-image p {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        @media (max-width: 768px) {
+            .auth-container {
+                flex-direction: column;
+            }
+
+            .auth-image {
+                display: none;
+            }
+        }
+
+        .social-auth {
+            margin-top: 2rem;
+            display: flex;
+            gap: 1rem;
+        }
+
+        .social-btn {
+            flex: 1;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .social-btn:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+    </style>
+</head>
+<body>
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            {% for category, message in messages %}
+                <div class="alert alert-{{ category }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+    {% endwith %}
+
+    <div class="auth-container">
+        <div class="auth-form">
+            <a href="/" class="logo">EbuTrubu</a>
+            <div id="loginForm" style="display: {{ 'block' if not register else 'none' }}">
+                <h1>Войти в аккаунт</h1>
+                <form action="{{ url_for('auth') }}" method="POST">
+                    <div class="form-group">
+                        <label for="login-username">Имя пользователя</label>
+                        <input type="text" id="login-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="login-password">Пароль</label>
+                        <input type="password" id="login-password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Войти</button>
+                </form>
+                <div class="social-auth">
+                    <button class="social-btn">
+                        <img src="{{ url_for('static', filename='images/google.png') }}" alt="Google" width="24" height="24">
+                        Google
+                    </button>
+                    <button class="social-btn">
+                        <img src="{{ url_for('static', filename='images/twitch.png') }}" alt="Twitch" width="24" height="24">
+                        Twitch
+                    </button>
+                </div>
+                <div class="auth-switch">
+                    <p>Нет аккаунта? <a href="#" onclick="toggleForms()">Зарегистрироваться</a></p>
+                </div>
+            </div>
+
+            <div id="registerForm" style="display: {{ 'block' if register else 'none' }}">
+                <h1>Создать аккаунт</h1>
+                <div class="role-select">
+                    <div class="role-option {{ 'active' if role == 'streamer' }}" onclick="selectRole('streamer')">
+                        Стример
+                    </div>
+                    <div class="role-option {{ 'active' if role == 'advertiser' }}" onclick="selectRole('advertiser')">
+                        Рекламодатель
+                    </div>
+                </div>
+                <form action="{{ url_for('auth') }}" method="POST">
+                    <input type="hidden" name="role" id="roleInput" value="{{ role or 'streamer' }}">
+                    <div class="form-group">
+                        <label for="register-username">Имя пользователя</label>
+                        <input type="text" id="register-username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password">Пароль</label>
+                        <input type="password" id="register-password" name="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="register-password-confirm">Подтвердите пароль</label>
+                        <input type="password" id="register-password-confirm" name="password_confirm" required>
+                    </div>
+                    <input type="hidden" name="register" value="{{ 'true' if register else 'false' }}">
+                    <button type="submit" class="btn btn-primary">Создать аккаунт</button>
+                </form>
+                <div class="auth-switch">
+                    <p>Уже есть аккаунт? <a href="#" onclick="toggleForms()">Войти</a></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="auth-image">
+            <h2>Добро пожаловать в будущее стриминга</h2>
+            <p>Используйте силу искусственного интеллекта для улучшения ваших трансляций</p>
+        </div>
+    </div>
+
+    <script>
+        function toggleForms() {
+            const loginForm = document.getElementById('loginForm');
+            const registerForm = document.getElementById('registerForm');
+            const currentUrl = new URL(window.location.href);
+            
+            if (loginForm.style.display === 'none') {
+                loginForm.style.display = 'block';
+                registerForm.style.display = 'none';
+                currentUrl.searchParams.delete('register');
+            } else {
+                loginForm.style.display = 'none';
+                registerForm.style.display = 'block';
+                currentUrl.searchParams.set('register', 'true');
+            }
+            window.history.pushState({}, '', currentUrl);
+        }
+
+        function selectRole(role) {
+            document.getElementById('roleInput').value = role;
+            document.querySelectorAll('.role-option').forEach(option => {
+                option.classList.remove('active');
+            });
+            event.target.classList.add('active');
+            
+            const currentUrl = new URL(window.location.href);
+            currentUrl.searchParams.set('role', role);
+            window.history.pushState({}, '', currentUrl);
+        }
+
+        // Проверка паролей при регистрации
+        document.querySelector('#registerForm form').addEventListener('submit', function(e) {
+            const password = document.getElementById('register-password').value;
+            const confirmPassword = document.getElementById('register-password-confirm').value;
+            
+            if (password !== confirmPassword) {
+                e.preventDefault();
+                alert('Пароли не совпадают!');
+            }
+        });
+    </script>
+</body>
+</html> 

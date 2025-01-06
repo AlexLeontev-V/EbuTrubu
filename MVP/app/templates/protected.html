@@ -87,11 +87,125 @@
         .slider-container {
             margin-top: 20px;
         }
+
+        .assistant-panel {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 20px;
+        }
+
+        .assistant-controls {
+            margin-bottom: 15px;
+        }
+
+        .keywords-section {
+            margin-bottom: 15px;
+        }
+
+        .keyword-item {
+            display: inline-block;
+            background-color: #e9ecef;
+            padding: 5px 10px;
+            margin: 5px;
+            border-radius: 3px;
+        }
+
+        .assistant-alerts {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid #dee2e6;
+            padding: 10px;
+        }
+
+        .alert {
+            padding: 10px;
+            margin: 5px 0;
+            background-color: #fff3cd;
+            border: 1px solid #ffeeba;
+            border-radius: 4px;
+        }
+
+        .stats-alert {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        /* Стили для голосового интерфейса */
+        .voice-panel {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+
+        .microphone-status {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .mic-active {
+            color: #28a745;
+            font-size: 24px;
+            animation: pulse 1.5s infinite;
+        }
+
+        .mic-inactive {
+            color: #dc3545;
+            font-size: 24px;
+        }
+
+        .voice-indicator {
+            margin-left: 10px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+        }
+
+        .voice-level {
+            width: 3px;
+            height: 100%;
+            background: #007bff;
+            margin: 0 1px;
+            transform-origin: bottom;
+        }
+
+        .transcript-box {
+            background: white;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            margin-top: 10px;
+            min-height: 60px;
+            max-height: 150px;
+            overflow-y: auto;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Добро пожаловать, {{ username }}!</h1>
+
+        <!-- Панель голосового ввода -->
+        <div class="voice-panel">
+            <div class="microphone-status">
+                <span id="micStatus" class="mic-inactive">🎤</span>
+                <div id="voiceIndicator" class="voice-indicator"></div>
+            </div>
+            <button id="startVoiceBtn" class="voice-button">Начать голосовой ввод</button>
+            <div id="transcriptBox" class="transcript-box">
+                <p>Распознанный текст появится здесь...</p>
+            </div>
+        </div>
 
         <form id="chatForm">
             <label for="video_url">Введите ссылку на YouTube трансляцию:</label>
@@ -115,6 +229,23 @@
         </div>
 
         <div id="messages"></div>
+
+        <div class="assistant-panel" id="assistantPanel" style="display: none;">
+            <h3>Панель ассистента</h3>
+            <div class="assistant-controls">
+                <button onclick="toggleAssistantActive()">Включить/выключить ассистента</button>
+                <button onclick="showAssistantStats()">Показать статистику</button>
+            </div>
+            <div class="keywords-section">
+                <h4>Ключевые слова</h4>
+                <input type="text" id="keywordInput" placeholder="Введите ключевое слово">
+                <button onclick="addKeyword()">Добавить</button>
+                <div id="keywordsList"></div>
+            </div>
+            <div class="assistant-alerts" id="assistantAlerts">
+                <!-- Здесь будут появляться уведомления от ассистента -->
+            </div>
+        </div>
     </div>
 
     <script>
@@ -149,6 +280,10 @@
         // Включение/выключение чата
         function toggleChat() {
             const videoUrl = document.getElementById('video_url').value;
+            if (!videoUrl) {
+                appendSystemMessage('Введите ссылку на трансляцию');
+                return;
+            }
 
             if (!chatActive) {
                 manualDisconnect = false;
@@ -159,29 +294,48 @@
                 }
 
                 const protocol = getWebSocketProtocol();
-                ws = new WebSocket(`${protocol}${window.location.host}/ws?video_url=${encodeURIComponent(videoUrl)}`);
+                try {
+                    ws = new WebSocket(`${protocol}${window.location.host}/streamer/ws/chat?video_id=${encodeURIComponent(videoUrl)}`);
 
-                ws.onmessage = function (event) {
-                    const message = JSON.parse(event.data).message;
-                    addMessageToChat(message);
-                    if (!assistantSpeaking && speechSynthesisActive) {
-                        addToSpeechQueue(message);
-                    }
-                };
+                    ws.onopen = function() {
+                        appendSystemMessage('Подключение к чату установлено');
+                        document.getElementById('toggleChatButton').textContent = 'Выключить чат';
+                        chatActive = true;
+                    };
 
-                ws.onclose = function () {
-                    appendSystemMessage('Чат отключен');
-                    if (!manualDisconnect) {
-                        reconnectChat();
-                    }
-                };
+                    ws.onmessage = function (event) {
+                        const data = JSON.parse(event.data);
+                        if (data.error) {
+                            appendSystemMessage('Ошибка: ' + data.error);
+                            return;
+                        }
+                        
+                        if (data.messages) {
+                            data.messages.forEach(message => {
+                                addMessageToChat(`${message.author}: ${message.text}`);
+                                if (!assistantSpeaking && speechSynthesisActive) {
+                                    addToSpeechQueue(message.text);
+                                }
+                            });
+                        }
+                    };
 
-                ws.onerror = function (error) {
-                    appendSystemMessage('Ошибка соединения');
-                };
+                    ws.onclose = function () {
+                        appendSystemMessage('Чат отключен');
+                        if (!manualDisconnect) {
+                            reconnectChat();
+                        }
+                    };
 
-                document.getElementById('toggleChatButton').textContent = 'Выключить чат';
-                chatActive = true;
+                    ws.onerror = function (error) {
+                        appendSystemMessage('Ошибка соединения: ' + error.message);
+                        console.error('WebSocket error:', error);
+                    };
+
+                } catch (error) {
+                    appendSystemMessage('Ошибка создания WebSocket: ' + error.message);
+                    console.error('Error creating WebSocket:', error);
+                }
             } else {
                 if (ws) {
                     manualDisconnect = true;
@@ -284,6 +438,198 @@
             systemMessage.textContent = message;
             messagesDiv.appendChild(systemMessage);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+
+        function handleError(error) {
+            console.error('Ошибка:', error);
+            appendSystemMessage('Произошла ошибка: ' + error.message);
+        }
+
+        function toggleAssistantActive() {
+            fetch('/streamer/toggle_assistant', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({active: assistantActive})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('assistantPanel').style.display = 
+                        assistantActive ? 'block' : 'none';
+                }
+            })
+            .catch(handleError);
+        }
+
+        function addKeyword() {
+            const keyword = document.getElementById('keywordInput').value;
+            if (keyword) {
+                fetch('/streamer/add_keyword', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({keyword: keyword})
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        updateKeywordsList();
+                        document.getElementById('keywordInput').value = '';
+                    }
+                });
+            }
+        }
+
+        function updateKeywordsList() {
+            fetch('/streamer/get_keywords')
+            .then(response => response.json())
+            .then(data => {
+                const keywordsList = document.getElementById('keywordsList');
+                keywordsList.innerHTML = data.keywords.map(
+                    keyword => `<div class="keyword-item">${keyword}</div>`
+                ).join('');
+            });
+        }
+
+        function showAssistantStats() {
+            fetch('/streamer/assistant_stats')
+            .then(response => response.json())
+            .then(data => {
+                const alertsDiv = document.getElementById('assistantAlerts');
+                alertsDiv.innerHTML = `
+                    <div class="stats-alert">
+                        <p>Настроение чата: ${data.mood}</p>
+                        <p>Активность: ${data.activity}</p>
+                        <p>Последние уведомления: ${data.alerts.join(', ')}</p>
+                    </div>
+                `;
+            });
+        }
+
+        // Периодическое обновление уведомлений
+        setInterval(() => {
+            if (assistantActive) {
+                fetch('/streamer/get_alerts')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.alerts.length > 0) {
+                        const alertsDiv = document.getElementById('assistantAlerts');
+                        data.alerts.forEach(alert => {
+                            const alertElement = document.createElement('div');
+                            alertElement.className = 'alert';
+                            alertElement.textContent = alert;
+                            alertsDiv.appendChild(alertElement);
+                        });
+                    }
+                });
+            }
+        }, 5000);
+
+        // Добавляем переменные для распознавания речи
+        let recognition;
+        let isListening = false;
+
+        // Инициализация распознавания речи
+        if ('webkitSpeechRecognition' in window) {
+            recognition = new webkitSpeechRecognition();
+            recognition.continuous = true;
+            recognition.interimResults = true;
+            recognition.lang = 'ru-RU';
+
+            recognition.onstart = function() {
+                isListening = true;
+                document.getElementById('micStatus').className = 'mic-active';
+                document.getElementById('startVoiceBtn').textContent = 'Остановить';
+                createVoiceIndicator();
+            };
+
+            recognition.onend = function() {
+                isListening = false;
+                document.getElementById('micStatus').className = 'mic-inactive';
+                document.getElementById('startVoiceBtn').textContent = 'Начать голосовой ввод';
+                stopVoiceIndicator();
+            };
+
+            recognition.onresult = function(event) {
+                let interimTranscript = '';
+                let finalTranscript = '';
+
+                for (let i = event.resultIndex; i < event.results.length; i++) {
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) {
+                        finalTranscript += transcript;
+                        processVoiceCommand(transcript);
+                    } else {
+                        interimTranscript += transcript;
+                    }
+                }
+
+                document.getElementById('transcriptBox').innerHTML = 
+                    `<p><strong>Финальный текст:</strong> ${finalTranscript}</p>
+                     <p><em>Промежуточный текст:</em> ${interimTranscript}</p>`;
+            };
+        }
+
+        // Обработка голосовых команд
+        function processVoiceCommand(command) {
+            command = command.toLowerCase().trim();
+            console.log('Получена команда:', command);
+
+            // Отправляем команду ассистенту
+            fetch('/streamer/process_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.response) {
+                    speakAssistantMessage(data.response);
+                }
+            });
+        }
+
+        // Управление голосовым вводом
+        document.getElementById('startVoiceBtn').onclick = function() {
+            if (!isListening) {
+                recognition.start();
+            } else {
+                recognition.stop();
+            }
+        };
+
+        // Визуализация уровня громкости
+        function createVoiceIndicator() {
+            const indicator = document.getElementById('voiceIndicator');
+            indicator.innerHTML = '';
+            for (let i = 0; i < 20; i++) {
+                const bar = document.createElement('div');
+                bar.className = 'voice-level';
+                indicator.appendChild(bar);
+            }
+            animateVoiceIndicator();
+        }
+
+        function animateVoiceIndicator() {
+            if (!isListening) return;
+            const bars = document.querySelectorAll('.voice-level');
+            bars.forEach(bar => {
+                const height = Math.random() * 100;
+                bar.style.transform = `scaleY(${height}%)`;
+            });
+            requestAnimationFrame(animateVoiceIndicator);
+        }
+
+        function stopVoiceIndicator() {
+            const bars = document.querySelectorAll('.voice-level');
+            bars.forEach(bar => {
+                bar.style.transform = 'scaleY(0)';
+            });
         }
     </script>
 </body>

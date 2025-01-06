@@ -4,8 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}EbuTrubu.com{% endblock %}</title>
-    <link rel="stylesheet" href="/static/style.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap" rel="stylesheet">
+    <script src="{{ url_for('static', filename='js/main.js') }}" defer></script>
     <style>
         /* Основные стили */
         body {
@@ -67,8 +68,16 @@
     <header>
         <nav>
             <a href="/" class="{% if request.path == '/' %}active{% endif %}">Главная</a>
-            <a href="/login" class="{% if request.path == '/login' %}active{% endif %}">Войти</a>
-            <a href="/register" class="{% if request.path == '/register' %}active{% endif %}">Зарегистрироваться</a>
+            {% if not request.cookies.get('token') %}
+                <a href="/login" class="{% if request.path == '/login' %}active{% endif %}">Войти</a>
+                <a href="/register" class="{% if request.path == '/register' %}active{% endif %}">Зарегистрироваться</a>
+            {% else %}
+                {% if role == 'streamer' %}
+                    <a href="/protected" class="{% if request.path == '/protected' %}active{% endif %}">Ассистент</a>
+                {% endif %}
+                <a href="/dashboard" class="{% if request.path == '/dashboard' %}active{% endif %}">Панель управления</a>
+                <a href="/logout">Выйти</a>
+            {% endif %}
         </nav>
     </header>
 

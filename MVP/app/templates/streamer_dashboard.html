@@ -95,6 +95,7 @@
 <body>
 <div class="container">
     <h1>Добро пожаловать, {{ username }}!</h1>
+    <a href="{{ url_for('protected') }}" class="button">Открыть ассистента</a>
 
     <div class="form-group">
         <label for="video-url">Ссылка на трансляцию:</label>

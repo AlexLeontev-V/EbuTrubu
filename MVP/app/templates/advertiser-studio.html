@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EbuTrubu - Панель рекламодателя</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Базовые стили такие же, как в streamer-studio.html */
+        /* Добавим специфичные стили для рекламодателя */
+
+        .campaign-card {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.3s;
+        }
+
+        .campaign-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
+
+        .campaign-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .campaign-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 1rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+        }
+
+        .status-active {
+            background: #DEF7EC;
+            color: #03543F;
+        }
+
+        .status-paused {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .campaign-stats {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 1rem;
+            margin: 1rem 0;
+        }
+
+        .keyword-tag {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            background: #F3F4F6;
+            border-radius: 1rem;
+            margin: 0.25rem;
+            font-size: 0.875rem;
+        }
+
+        .balance-widget {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
+            color: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .balance-amount {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .chart-container {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+            height: 300px;
+        }
+
+        .create-campaign-form {
+            background: white;
+            border-radius: 1rem;
+            padding: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1rem;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 0.5rem;
+            color: var(--gray);
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.75rem;
+            border: 2px solid #E5E7EB;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .user-dropdown {
+            position: relative;
+            cursor: pointer;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            right: 0;
+            background: white;
+            min-width: 160px;
+            box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+            border-radius: 0.5rem;
+            z-index: 1;
+        }
+
+        .user-dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+        .dropdown-content a {
+            color: var(--dark);
+            padding: 0.75rem 1rem;
+            text-decoration: none;
+            display: block;
+        }
+
+        .dropdown-content a:hover {
+            background: #F3F4F6;
+        }
+
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 2rem;
+            border-radius: 1rem;
+            width: 100%;
+            max-width: 500px;
+        }
+    </style>
+</head>
+<body>
+    <aside class="sidebar">
+        <a href="{{ url_for('dashboard') }}" class="logo">
+            <span>EbuTrubu</span>
+        </a>
+        <nav>
+            <a href="{{ url_for('advertiser_studio') }}" class="nav-item {{ 'active' if request.endpoint == 'advertiser_studio' }}">
+                <i>📊</i>
+                <span>Обзор</span>
+            </a>
+            <a href="{{ url_for('advertiser_studio') }}#campaigns" class="nav-item">
+                <i>🎯</i>
+                <span>Кампании</span>
+            </a>
+            <a href="{{ url_for('advertiser_studio') }}#balance" class="nav-item">
+                <i>💰</i>
+                <span>Баланс</span>
+            </a>
+            <a href="{{ url_for('analytics') }}" class="nav-item {{ 'active' if request.endpoint == 'analytics' }}">
+                <i>📈</i>
+                <span>Статистика</span>
+            </a>
+            <a href="{{ url_for('settings') }}" class="nav-item {{ 'active' if request.endpoint == 'settings' }}">
+                <i>⚙️</i>
+                <span>Настройки</span>
+            </a>
+            <a href="{{ url_for('logout') }}" class="nav-item">
+                <i>🚪</i>
+                <span>Выйти</span>
+            </a>
+        </nav>
+    </aside>
+
+    <main class="main-content">
+        <div class="top-bar">
+            <h1>Панель управления</h1>
+            <div class="user-menu">
+                <div class="user-dropdown">
+                    <span class="user-name">{{ username }}</span>
+                    <div class="dropdown-content">
+                        <a href="{{ url_for('settings') }}">Настройки</a>
+                        <a href="{{ url_for('logout') }}">Выйти</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="balance-widget">
+            <div class="balance-amount">15,000 ₽</div>
+            <div class="balance-label">Текущий баланс</div>
+            <button class="btn btn-outline" style="margin-top: 1rem;" onclick="showTopUpForm()">Пополнить баланс</button>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-value">3</div>
+                <div class="stat-label">Активные кампании</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">1,234</div>
+                <div class="stat-label">Показы</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">56</div>
+                <div class="stat-label">Упоминания</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value">4.8%</div>
+                <div class="stat-label">Конверсия</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="widget-header">
+                <h2 class="widget-title">Статистика показов</h2>
+                <select class="btn btn-outline">
+                    <option>За неделю</option>
+                    <option>За месяц</option>
+                    <option>За год</option>
+                </select>
+            </div>
+            <div id="performanceChart" style="height: 250px;">
+                <!-- Здесь будет график -->
+            </div>
+        </div>
+
+        <div class="widget-header">
+            <h2 class="widget-title">Активные кампании</h2>
+            <button class="btn btn-primary" onclick="showCreateCampaign()">Создать кампанию</button>
+        </div>
+
+        <div class="campaign-card">
+            <div class="campaign-header">
+                <h3>Летняя распродажа</h3>
+                <span class="campaign-status status-active">Активна</span>
+            </div>
+            <div class="campaign-stats">
+                <div>
+                    <div class="stat-value">5,000 ₽</div>
+                    <div class="stat-label">Бюджет</div>
+                </div>
+                <div>
+                    <div class="stat-value">234</div>
+                    <div class="stat-label">Показы</div>
+                </div>
+                <div>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Упоминания</div>
+                </div>
+                <div>
+                    <div class="stat-value">5.1%</div>
+                    <div class="stat-label">CTR</div>
+                </div>
+            </div>
+            <div class="campaign-keywords">
+                <span class="keyword-tag">скидки</span>
+                <span class="keyword-tag">распродажа</span>
+                <span class="keyword-tag">лето</span>
+            </div>
+        </div>
+
+        <!-- Форма создания кампании (изначально скрыта) -->
+        <div id="createCampaignForm" class="create-campaign-form" style="display: none;">
+            <div class="widget-header">
+                <h2 class="widget-title">Создать новую кампанию</h2>
+                <button class="btn btn-outline" onclick="hideCreateCampaign()">Закрыть</button>
+            </div>
+            <form onsubmit="createCampaign(event)">
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Название кампании</label>
+                        <input type="text" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Бюджет (₽)</label>
+                        <input type="number" min="1000" required>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Ключевые слова (через запятую)</label>
+                    <textarea rows="3" required></textarea>
+                </div>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Категория</label>
+                        <select required>
+                            <option>Игры</option>
+                            <option>Технологии</option>
+                            <option>Развлечения</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Тип кампании</label>
+                        <select required>
+                            <option>Упоминания в чате</option>
+                            <option>Баннерная реклама</option>
+                        </select>
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">Создать кампанию</button>
+            </form>
+        </div>
+
+        <!-- Добавим форму пополнения баланса -->
+        <div id="topUpForm" class="modal" style="display: none;">
+            <div class="modal-content">
+                <h2>Пополнение баланса</h2>
+                <form onsubmit="processTopUp(event)">
+                    <div class="form-group">
+                        <label>Сумма пополнения (₽)</label>
+                        <input type="number" min="1000" step="1000" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Способ оплаты</label>
+                        <select required>
+                            <option value="card">Банковская карта</option>
+                            <option value="qiwi">QIWI</option>
+                            <option value="yoomoney">ЮMoney</option>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Пополнить</button>
+                    <button type="button" class="btn btn-outline" onclick="hideTopUpForm()">Отмена</button>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        function showCreateCampaign() {
+            document.getElementById('createCampaignForm').style.display = 'block';
+        }
+
+        function hideCreateCampaign() {
+            document.getElementById('createCampaignForm').style.display = 'none';
+        }
+
+        function showTopUpForm() {
+            document.getElementById('topUpForm').style.display = 'flex';
+        }
+
+        function hideTopUpForm() {
+            document.getElementById('topUpForm').style.display = 'none';
+        }
+
+        async function processTopUp(event) {
+            event.preventDefault();
+            const form = event.target;
+            const amount = form.querySelector('input[type="number"]').value;
+            const method = form.querySelector('select').value;
+
+            try {
+                const response = await fetch('/advertiser/top-up', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ amount, method })
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Баланс успешно пополнен!');
+                    hideTopUpForm();
+                    // Обновляем отображение баланса
+                    location.reload();
+                } else {
+                    alert('Ошибка при пополнении баланса');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при обработке платежа');
+            }
+        }
+
+        // Обработка создания кампании
+        async function createCampaign(event) {
+            event.preventDefault();
+            const form = event.target;
+            const formData = new FormData(form);
+            
+            try {
+                const response = await fetch('/advertiser/create-campaign', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+                if (data.success) {
+                    alert('Кампания успешно создана!');
+                    hideCreateCampaign();
+                    location.reload();
+                } else {
+                    alert('Ошибка при создании кампании');
+                }
+            } catch (error) {
+                console.error('Ошибка:', error);
+                alert('Произошла ошибка при создании кампании');
+            }
+        }
+
+        // Здесь можно добавить код для отрисовки графиков
+        // Например, используя Chart.js или другую библиотеку
+    </script>
+</body>
+</html> 
